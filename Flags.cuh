@@ -1,5 +1,7 @@
 #define EXPORT __declspec(dllexport)
 
+#define EXTERN_C extern "C"
+
 #ifdef __CUDACC__
 	#define HOST __host__  // call from host
 	#define DEVICE __device__  // call from device

@@ -14,8 +14,11 @@ EXTERN_C
 		case MathDomain::Double:
 			CUDA_CALL_DOUBLE(__Initialize__<double>, (double*)buf.pointer, buf.size, value);
 			break;
-		default:
+		case MathDomain::Int:
+			CUDA_CALL_SINGLE(__Initialize__<int>, (int*)buf.pointer, buf.size, value);
 			break;
+		default:
+			return -1;
 		}
 
 		return cudaGetLastError();
@@ -34,7 +37,7 @@ EXTERN_C
 			CUDA_CALL_DOUBLE(__LinSpace__<double>, (double*)buf.pointer, buf.size, (double)x0, (double)dx);
 			break;
 		default:
-			break;
+			return -1;
 		}
 
 		return cudaGetLastError();
@@ -63,7 +66,7 @@ EXTERN_C
 			CUDA_CALL_XYZ(__RandUniform__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
 			break;
 		default:
-			break;
+			return -1;
 		}
 
 		cudaFree(states);
@@ -94,7 +97,7 @@ EXTERN_C
 			CUDA_CALL_XYZ(__RandNormal__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
 			break;
 		default:
-			break;
+			return -1;
 		}
 
 		cudaFree(states);
@@ -116,7 +119,7 @@ EXTERN_C
 			CUDA_CALL_XY(__Eye__<double>, gridDim, blockDim, (double*)buf.pointer, buf.nRows);
 			break;
 		default:
-			break;
+			return -1;
 		}
 			
 		return cudaGetLastError();
@@ -136,7 +139,7 @@ EXTERN_C
 			CUDA_CALL_XY(__OnesUpperTriangular__<double>, gridDim, blockDim, (double*)buf.pointer, buf.nRows);
 			break;
 		default:
-			break;
+			return -1;
 		}
 
 		return cudaGetLastError();

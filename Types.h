@@ -233,4 +233,5 @@ extern "C"
 	}
 }
 
-#undef MAKE_DEFAULT_CONSTRUCTORS;
+#undef MAKE_DEFAULT_CONSTRUCTORS
+

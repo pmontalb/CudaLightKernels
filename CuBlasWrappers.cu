@@ -70,7 +70,7 @@ EXTERN_C
 		{
 			const float _alpha = 1.0f;
 			const float beta = (float)alpha;
-			return cublasSgeam(handle, cublasOperation[aOperation], cublasOperation[bOperation],
+			return cublasSgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
 				(float*)A.pointer, A.nRows,
@@ -81,7 +81,7 @@ EXTERN_C
 		case MathDomain::Double:
 		{
 			const double _alpha = 1.0;
-			return cublasDgeam(handle, cublasOperation[aOperation], cublasOperation[bOperation],
+			return cublasDgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
 				(double*)A.pointer, A.nRows,
@@ -171,7 +171,7 @@ EXTERN_C
 		{
 			const float _alpha = (float)alpha;
 			const float beta = 0.0f;
-			return cublasSgemm(handle, cublasOperation[bOperation], cublasOperation[cOperation],
+			return cublasSgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				leadingDimensionB, C.nCols, leadingDimensionC,
 				&_alpha,
 				(float*)B.pointer, leadingDimensionB,
@@ -182,7 +182,7 @@ EXTERN_C
 		case MathDomain::Double:
 		{
 			const double beta = 0.0;
-			return cublasDgemm(handle, cublasOperation[bOperation], cublasOperation[cOperation],
+			return cublasDgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				leadingDimensionB, C.nCols, leadingDimensionC,
 					&alpha,
 					(double*)B.pointer, leadingDimensionB,
@@ -204,7 +204,7 @@ EXTERN_C
 		{
 			const float _alpha = (float)alpha;
 			const float beta = 0.0f;
-			return cublasSgemv(handle, cublasOperation[aOperation],
+			return cublasSgemv(handle, cublasOperation[static_cast<unsigned>(aOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
 				(float*)A.pointer, A.nRows,
@@ -215,7 +215,7 @@ EXTERN_C
 		case MathDomain::Double:
 		{
 			const double beta = 0.0;
-			return cublasDgemv(handle, cublasOperation[aOperation],
+			return cublasDgemv(handle, cublasOperation[static_cast<unsigned>(aOperation)],
 				A.nRows, A.nCols,
 				&alpha,
 				(double*)A.pointer, A.nRows,
@@ -337,7 +337,7 @@ EXTERN_C
 			if (cusolverDnSgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
 				return -1;
 			// Solve
-			err = cusolverDnSgetrs(handle, cublasOperation[aOperation], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (float*)B.pointer, A.nRows, info);
+			err = cusolverDnSgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (float*)B.pointer, A.nRows, info);
 			cudaDeviceSynchronize();
 
 			// free memory

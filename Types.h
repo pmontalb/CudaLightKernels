@@ -26,7 +26,7 @@ extern "C"
 		Double
 	};
 
-	enum MatrixOperation
+	enum class MatrixOperation : unsigned int
 	{
 		None = 0,
 		Transpose = 1

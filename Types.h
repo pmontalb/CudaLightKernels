@@ -11,6 +11,10 @@
 
 extern "C"
 {
+#ifdef __CUDACC__
+	static const cublasOperation_t cublasOperation[] = { CUBLAS_OP_N, CUBLAS_OP_T };
+#endif
+
 	enum class MemorySpace
 	{
 		Null,
@@ -31,16 +35,14 @@ extern "C"
 		None = 0,
 		Transpose = 1
 	};
-#ifdef __CUDACC__
-	static const cublasOperation_t cublasOperation[] = { CUBLAS_OP_N, CUBLAS_OP_T };
-#endif
 
-	class IMemoryBuffer
+	class MemoryBuffer
 	{
 	public:
 		ptr_t pointer;
 		MemorySpace memorySpace;
 		MathDomain mathDomain;
+		unsigned size;
 
 		size_t ElementarySize() const noexcept
 		{
@@ -57,36 +59,18 @@ extern "C"
 			}
 		}
 
-		virtual size_t TotalSize() const noexcept = 0;
-
-		IMemoryBuffer(const ptr_t pointer = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null)
-			: pointer(pointer), memorySpace(memorySpace), mathDomain(mathDomain)
-		{
-				
-		}
-
-		MAKE_DEFAULT_CONSTRUCTORS(IMemoryBuffer);
-	};
-
-	class MemoryBuffer : public IMemoryBuffer
-	{
-	public:
-		unsigned size;
-
-		size_t TotalSize() const noexcept override
+		virtual size_t TotalSize() const noexcept
 		{
 			return size * ElementarySize();
-		}
+		};
 
-		explicit MemoryBuffer(const ptr_t pointer = 0,
+		MemoryBuffer(const ptr_t pointer = 0,
 			const unsigned size = 0,
 			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null) noexcept
-			: IMemoryBuffer(pointer, memorySpace, mathDomain), size(size)
+			const MathDomain mathDomain = MathDomain::Null)
+			: pointer(pointer), memorySpace(memorySpace), mathDomain(mathDomain), size(size)
 		{
-
+				
 		}
 
 		MAKE_DEFAULT_CONSTRUCTORS(MemoryBuffer);
@@ -154,39 +138,17 @@ extern "C"
 		MAKE_DEFAULT_CONSTRUCTORS(MemoryCube);
 	};
 
-	class ISparseMemoryBuffer : public IMemoryBuffer
-	{
-	public:
-		unsigned nNonZeros;
-
-		ISparseMemoryBuffer(const ptr_t pointer = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null,
-			unsigned nNonZeros = 0)
-			: IMemoryBuffer(pointer, memorySpace, mathDomain), nNonZeros(nNonZeros)
-		{
-				
-		}
-
-		size_t TotalSize() const noexcept override
-		{
-			return nNonZeros * ElementarySize();
-		}
-
-		MAKE_DEFAULT_CONSTRUCTORS(ISparseMemoryBuffer);
-	};
-
-	class SparseMemoryBuffer : public ISparseMemoryBuffer
+	class SparseMemoryBuffer : public MemoryBuffer
 	{
 	public:
 		ptr_t indices;
 
 		SparseMemoryBuffer(const ptr_t pointer = 0,
+			const unsigned nNonZeros = 0,
 			const ptr_t indices = 0,
 			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null,
-			unsigned nNonZeros = 0)
-			: ISparseMemoryBuffer(pointer, memorySpace, mathDomain, nNonZeros), indices(indices)
+			const MathDomain mathDomain = MathDomain::Null)
+			: MemoryBuffer(pointer, nNonZeros, memorySpace, mathDomain), indices(indices)
 		{
 				
 		}
@@ -195,25 +157,25 @@ extern "C"
 	};
 
 	/**
-		* CSR Matrix representation
-		*/
-	class SparseMemoryTile : public ISparseMemoryBuffer
+	* CSR Matrix representation
+	*/
+	class SparseMemoryTile : public MemoryBuffer
 	{
 	public:
 		ptr_t nonZeroColumnIndices;
-		unsigned nNonZeroRows;
+		ptr_t nNonZeroRows;
 		unsigned nRows;
 		unsigned nCols;
 
 		SparseMemoryTile(const ptr_t pointer = 0,
+			const unsigned nNonZeros = 0,
 			const ptr_t nonZeroColumnIndices = 0,
-			unsigned nNonZeroRows = 0,
-			unsigned nRows = 0,
-			unsigned nCols = 0,
+		    const ptr_t nNonZeroRows = 0,
+			const unsigned nRows = 0,
+			const unsigned nCols = 0,
 			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null,
-			unsigned nNonZeros = 0)
-			: ISparseMemoryBuffer(pointer, memorySpace, mathDomain, nNonZeros), 
+			const MathDomain mathDomain = MathDomain::Null)
+			: MemoryBuffer(pointer, nNonZeros, memorySpace, mathDomain),
 				nonZeroColumnIndices(nonZeroColumnIndices), nNonZeroRows(nNonZeroRows), nRows(nRows), nCols(nCols)
 		{
 				
@@ -222,12 +184,12 @@ extern "C"
 		MAKE_DEFAULT_CONSTRUCTORS(SparseMemoryTile);
 	};
 
-	static size_t GetElementarySize(const IMemoryBuffer& memoryBuffer) noexcept
+	static size_t GetElementarySize(const MemoryBuffer& memoryBuffer) noexcept
 	{
 		return memoryBuffer.ElementarySize();
 	}
 
-	static size_t GetTotalSize(const IMemoryBuffer& memoryBuffer) noexcept
+	static size_t GetTotalSize(const MemoryBuffer& memoryBuffer) noexcept
 	{
 		return memoryBuffer.TotalSize();
 	}

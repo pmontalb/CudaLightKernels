@@ -20,7 +20,7 @@ EXTERN_C
 				return err;
 
 			const float _alpha = (float)alpha;
-			cusparseSaxpyi(cuSparseHandle, x.nNonZeros, &_alpha, (float*)x.pointer, (int*)x.indices, (float*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+			cusparseSaxpyi(cuSparseHandle, x.size, &_alpha, (float*)x.pointer, (int*)x.indices, (float*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
 			break;
 		};
 		case MathDomain::Double:
@@ -29,7 +29,7 @@ EXTERN_C
 			if (err)
 				return err;
 
-			cusparseDaxpyi(cuSparseHandle, x.nNonZeros, &alpha, (double*)x.pointer, (int*)x.indices, (double*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+			cusparseDaxpyi(cuSparseHandle, x.size, &alpha, (double*)x.pointer, (int*)x.indices, (double*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
 			break;
 		};;
 		default: 
@@ -58,7 +58,7 @@ EXTERN_C
 			const float _alpha = (float)alpha;
 
 			err = cusparseScsrmv(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-				A.nRows, A.nCols, A.nNonZeros,
+				A.nRows, A.nCols, A.size,
 				&_alpha, descr,
 				(float*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
 				(float*)x.pointer,
@@ -71,7 +71,7 @@ EXTERN_C
 			const double beta = 0.0;
 
 			err = cusparseDcsrmv(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
-				A.nRows, A.nCols, A.nNonZeros,
+				A.nRows, A.nCols, A.size,
 				&alpha, descr,
 				(double*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
 				(double*)x.pointer,

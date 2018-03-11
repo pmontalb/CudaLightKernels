@@ -15,7 +15,7 @@ EXTERN_C
 			CUDA_CALL_DOUBLE(__Initialize__<double>, (double*)buf.pointer, buf.size, value);
 			break;
 		case MathDomain::Int:
-			CUDA_CALL_SINGLE(__Initialize__<int>, (int*)buf.pointer, buf.size, value);
+			CUDA_CALL_SINGLE(__Initialize__<int>, (int*)buf.pointer, buf.size, (int)value);
 			break;
 		default:
 			return -1;

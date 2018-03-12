@@ -43,7 +43,7 @@ EXTERN_C
 	/**
 	*	yDense = ASparse * xDense
 	*/
-	EXPORT int _SparseDot(MemoryBuffer y, const SparseMemoryTile A, const MemoryBuffer x, const double alpha)
+	EXPORT int _SparseDot(MemoryBuffer y, const SparseMemoryTile A, const MemoryBuffer x, const MatrixOperation aOperation, const double alpha)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
@@ -57,7 +57,7 @@ EXTERN_C
 			const float beta = 0.0f;
 			const float _alpha = (float)alpha;
 
-			err = cusparseScsrmv(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+			err = cusparseScsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
 				A.nRows, A.nCols, A.size,
 				&_alpha, descr,
 				(float*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
@@ -70,7 +70,7 @@ EXTERN_C
 		{
 			const double beta = 0.0;
 
-			err = cusparseDcsrmv(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+			err = cusparseDcsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
 				A.nRows, A.nCols, A.size,
 				&alpha, descr,
 				(double*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
@@ -91,7 +91,7 @@ EXTERN_C
 	/**
 	*	ADense = BSparse * CDense
 	*/
-	EXPORT int _SparseMultiply(MemoryTile A, const SparseMemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const double alpha)
+	EXPORT int _SparseMultiply(MemoryTile A, const SparseMemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const double alpha)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
@@ -105,7 +105,7 @@ EXTERN_C
 			const float beta = 0.0f;
 			const float _alpha = (float)alpha;
 
-			err = cusparseScsrmm(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+			err = cusparseScsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
 				leadingDimensionB, C.nCols, leadingDimensionC, B.nNonZeroRows,
 				&_alpha,
 				descr, (float*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,
@@ -118,7 +118,7 @@ EXTERN_C
 		{
 			const double beta = 0.0;
 
-			err = cusparseDcsrmm(handle, CUSPARSE_OPERATION_NON_TRANSPOSE,
+			err = cusparseDcsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
 				leadingDimensionB, C.nCols, leadingDimensionC, B.nNonZeroRows,
 				&alpha,
 				descr, (double*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,

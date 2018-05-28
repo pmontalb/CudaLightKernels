@@ -208,7 +208,7 @@ GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR states, const ptr_t
 }
 
 template <typename T>
-GLOBAL void __Eye__(T* RESTRICT A, size_t sz)
+GLOBAL void __Eye__(T* RESTRICT A, const size_t sz)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int j = blockDim.y * blockIdx.y + threadIdx.y;

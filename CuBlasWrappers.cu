@@ -378,7 +378,7 @@ EXTERN_C
 			if (cusolverDnDgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
 				return -1;
 			// Solve
-			err = cusolverDnDgetrs(handle, CUBLAS_OP_N, A.nRows, B.nCols, aPtr, A.nRows, ipiv, (double*)B.pointer, A.nRows, info);
+			err = cusolverDnDgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (double*)B.pointer, A.nRows, info);
 			cudaDeviceSynchronize();
 
 			// free memory
@@ -395,7 +395,7 @@ EXTERN_C
 	}
 
 	/**
-	* A = A^(-1) by means of Cholesky
+	* A = A^(-1) by means of LU factorization
 	*/
 	EXPORT int _Invert(MemoryTile A, const MatrixOperation aOperation)
 	{

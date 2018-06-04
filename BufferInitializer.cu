@@ -18,7 +18,7 @@ EXTERN_C
 			CUDA_CALL_SINGLE(__Initialize__<int>, (int*)buf.pointer, buf.size, (int)value);
 			break;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		return cudaGetLastError();
@@ -37,7 +37,7 @@ EXTERN_C
 			CUDA_CALL_DOUBLE(__LinSpace__<double>, (double*)buf.pointer, buf.size, (double)x0, (double)dx);
 			break;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		return cudaGetLastError();
@@ -46,15 +46,16 @@ EXTERN_C
 	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed)
 	{
 		if (buf.size & 1)
-			return -1;
+			return CudaKernelException::_ExpectedEvenSizeException;
 
 		dim3 block, grid;
 		const unsigned halfSz = buf.size >> 1;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, halfSz);
 
 		curandState *states = 0;
-		if (cudaMalloc((void **)&states, grid.x * block.x * sizeof(curandState)))
-			return -1;
+		int err = cudaMalloc((void **)&states, grid.x * block.x * sizeof(curandState));
+		if (err)
+			return err;
 		CUDA_CALL_XY(__SetupCuRand__, grid, block, states, halfSz, seed);
 
 		switch (buf.mathDomain)
@@ -66,7 +67,7 @@ EXTERN_C
 			CUDA_CALL_XYZ(__RandUniform__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
 			break;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		cudaFree(states);
@@ -77,15 +78,16 @@ EXTERN_C
 	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed)
 	{
 		if (buf.size & 1)
-			return -1;
+			return CudaKernelException::_ExpectedEvenSizeException;
 
 		dim3 block, grid;
 		const unsigned halfSz = buf.size >> 1;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, halfSz);
 
 		curandState *states = 0;
-		if (cudaMalloc((void **)&states, grid.x * block.x * sizeof(curandState)))
-			return -1;
+		int err = cudaMalloc((void **)&states, grid.x * block.x * sizeof(curandState));
+		if (err)
+			return err;
 		CUDA_CALL_XY(__SetupCuRand__, grid, block, states, halfSz, seed);
 
 		switch (buf.mathDomain)
@@ -97,7 +99,7 @@ EXTERN_C
 			CUDA_CALL_XYZ(__RandNormal__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
 			break;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		cudaFree(states);
@@ -119,7 +121,7 @@ EXTERN_C
 			CUDA_CALL_XY(__Eye__<double>, gridDim, blockDim, (double*)buf.pointer, buf.nRows);
 			break;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 			
 		return cudaGetLastError();

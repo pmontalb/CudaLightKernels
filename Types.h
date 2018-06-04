@@ -19,6 +19,14 @@ extern "C"
 	static const cusparseOperation_t cusparseOperation[] = { CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_TRANSPOSE };
 #endif
 
+	enum CudaKernelException
+	{
+		_NotImplementedException = -1,
+		_NotSupportedException = -2,
+		_ExpectedEvenSizeException = -3,
+		_InternalException = -4
+	};
+
 	enum class MemorySpace
 	{
 		Null,

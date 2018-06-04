@@ -32,7 +32,7 @@ EXTERN_C
 				return cublasDaxpy(handle, z.size, &alpha, (double*)x.pointer, 1, (double*)z.pointer, 1);
 			}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -53,7 +53,7 @@ EXTERN_C
 		case MathDomain::Double:
 			return cublasDaxpy(handle, z.size, &alpha, (double*)x.pointer, 1, (double*)z.pointer, 1);
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -90,7 +90,7 @@ EXTERN_C
 				(double*)A.pointer, A.nRows);
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -110,7 +110,7 @@ EXTERN_C
 		case MathDomain::Double:
 			return cublasDscal(handle, z.size, &alpha, (double*)z.pointer, 1);
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -155,7 +155,7 @@ EXTERN_C
 				(double*)z.pointer, 1);
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 
@@ -191,7 +191,7 @@ EXTERN_C
 					(double*)A.pointer, leadingDimensionB);
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -224,7 +224,7 @@ EXTERN_C
 				(double*)y.pointer, 1);
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 	}
 
@@ -238,16 +238,20 @@ EXTERN_C
 		case MathDomain::Float: 
 		{
 			float *onesPtr = nullptr;
-			if (cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(float)))
-				return -1;
+			err = cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(float));
+			if (err)
+				return err;
 			MemoryTile ones((ptr_t)onesPtr, A.nRows, A.nCols, A.memorySpace, A.mathDomain);
 			_OnesUpperTriangular(ones);
 
 			float *buffer = nullptr;
-			if (cudaMalloc((void **)&buffer, A.nRows * A.nCols * sizeof(float)))
-				return -1;
+			err = cudaMalloc((void **)&buffer, A.nRows * A.nCols * sizeof(float));
+			if (err)
+				return err;
 
-			cudaMemcpy(buffer, (void*)A.pointer, A.nRows * A.nCols * sizeof(float), cudaMemcpyDeviceToDevice);
+			err = cudaMemcpy(buffer, (void*)A.pointer, A.nRows * A.nCols * sizeof(float), cudaMemcpyDeviceToDevice);
+			if (err)
+				return err;
 
 			float alpha = 1.0f, beta = 0.0f;
 			err = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
@@ -265,14 +269,17 @@ EXTERN_C
 		case MathDomain::Double: 
 		{
 			double *onesPtr = nullptr;
-			if (cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(double)))
-				return -1;
+			err = cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(double));
+			if (err)
+				return err;
+
 			MemoryTile ones((ptr_t)onesPtr, A.nRows, A.nCols, A.memorySpace, A.mathDomain);
 			_OnesUpperTriangular(ones);
 
 			double *buffer = nullptr;
-			if (cudaMalloc((void **)&buffer, A.nRows * A.nCols * sizeof(double)))
-				return -1;
+			err = cudaMalloc((void **)&buffer, A.nRows * A.nCols * sizeof(double));
+			if (err)
+				return err;
 
 			cudaMemcpy(buffer, (void*)A.pointer, A.nRows * A.nCols * sizeof(double), cudaMemcpyDeviceToDevice);
 
@@ -290,7 +297,7 @@ EXTERN_C
 			break;
 		}
 		default: 
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		return err;
@@ -309,33 +316,38 @@ EXTERN_C
 		{
 			// Need to copy A, as it will be overwritten by its factorization
 			float *aPtr = nullptr;
-			if (cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(float)))
-				return -1;
+			err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(float));
+			if (err)
+				return err;
 			cudaMemcpy(aPtr, (float*)A.pointer, A.nRows * A.nRows * sizeof(float), cudaMemcpyDeviceToDevice);
 
 			// calculate buffer size required by the solver
 			int bufferSize = 0;
 			if (cusolverDnSgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.nRows, &bufferSize))
-				return -1;
+				return CudaKernelException::_InternalException;
 			float *buffer = nullptr;
-			if (cudaMalloc(&buffer, bufferSize * sizeof(float)))
-				return -1;
+			err = cudaMalloc(&buffer, bufferSize * sizeof(float));
+			if (err)
+				return err;
 
 			// allocate memory for pivoting
 			int *ipiv = nullptr;
-			if (cudaMalloc(&ipiv, A.nRows * sizeof(int)))
-				return -1;
+			err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
+			if (err)
+				return err;
 
 			// Initializes auxliary value for solver
 			int *info = nullptr;
-			if (cudaMalloc(&info, sizeof(int)))
-				return -1;
-			if (cudaMemset(info, 0, sizeof(int)))
-				return -1;
+			err = cudaMalloc(&info, sizeof(int));
+			if (err)
+				return err;
+			err = cudaMemset(info, 0, sizeof(int));
+			if (err)
+				return err;
 
 			// Factorize A (and overwrite it with L)
 			if (cusolverDnSgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
-				return -1;
+				return CudaKernelException::_InternalException;
 			// Solve
 			err = cusolverDnSgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (float*)B.pointer, A.nRows, info);
 			cudaDeviceSynchronize();
@@ -350,33 +362,38 @@ EXTERN_C
 		{
 			// Need to copy A, as it will be overwritten by its factorization
 			double *aPtr = nullptr;
-			if (cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(double)))
-				return -1;
+			err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(double));
+			if (err)
+				return err;
 			cudaMemcpy(aPtr, (float*)A.pointer, A.nRows * A.nRows * sizeof(double), cudaMemcpyDeviceToDevice);
 
 			// calculate buffer size required by the solver
 			int bufferSize = 0;
 			if (cusolverDnDgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.nRows, &bufferSize))
-				return -1;
+				return CudaKernelException::_InternalException;
 			double *buffer = nullptr;
-			if (cudaMalloc(&buffer, bufferSize * sizeof(double)))
-				return -1;
+			err = cudaMalloc(&buffer, bufferSize * sizeof(double));
+			if (err)
+				return err;
 
 			// allocate memory for pivoting
 			int *ipiv = nullptr;
-			if (cudaMalloc(&ipiv, A.nRows * sizeof(int)))
-				return -1;
+			err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
+			if (err)
+				return err;
 
 			// Initializes auxliary value for solver
 			int *info = nullptr;
-			if (cudaMalloc(&info, sizeof(int)))
-				return -1;
-			if (cudaMemset(info, 0, sizeof(int)))
-				return -1;
+			err = cudaMalloc(&info, sizeof(int));
+			if (err)
+				return err;
+			err = cudaMemset(info, 0, sizeof(int));
+			if (err)
+				return err;
 
 			// Factorize A (and overwrite it with L)
 			if (cusolverDnDgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
-				return -1;
+				return CudaKernelException::_InternalException;
 			// Solve
 			err = cusolverDnDgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (double*)B.pointer, A.nRows, info);
 			cudaDeviceSynchronize();
@@ -388,7 +405,7 @@ EXTERN_C
 			break;
 		};
 		default: 
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		return err;
@@ -400,32 +417,36 @@ EXTERN_C
 	EXPORT int _Invert(MemoryTile A, const MatrixOperation aOperation)
 	{
 		float* eyePtr = nullptr;
-		if (cudaMalloc(&eyePtr, A.TotalSize()))
-			return -1;
+		int err = cudaMalloc(&eyePtr, A.TotalSize());
+		if (err)
+			return err;
 		MemoryTile eye((ptr_t)eyePtr, A.nRows, A.nRows, A.memorySpace, A.mathDomain);
-		if (_Eye(eye))
-			return -1;
-		int err = _Solve(A, eye, aOperation);
+		err = _Eye(eye);
+		if (err)
+			return err;
+		err = _Solve(A, eye, aOperation);
+		if (err)
+			return err;
 
 		// This might not be the fastest implementation, but it's general enough
 		switch (A.mathDomain)
 		{
 		case MathDomain::Float:
 		{
-			int err2 = cudaMemcpy((float*)A.pointer, (float*)eye.pointer, A.TotalSize(), cudaMemcpyDefault);
-			if (err2)
-				return err2;
+			err = cudaMemcpy((float*)A.pointer, (float*)eye.pointer, A.TotalSize(), cudaMemcpyDefault);
+			if (err)
+				return err;
 			break;
 		}
 		case MathDomain::Double:
 		{
-			int err2 = cudaMemcpy((double*)A.pointer, (double*)eye.pointer, A.TotalSize(), cudaMemcpyDefault);
-			if (err2)
-				return err2;
+			err = cudaMemcpy((double*)A.pointer, (double*)eye.pointer, A.TotalSize(), cudaMemcpyDefault);
+			if (err)
+				return err;
 			break;
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		cudaFree((void*)eye.pointer);

@@ -11,32 +11,34 @@ EXTERN_C
 		const cusparseHandle_t& cuSparseHandle = detail::CuSparseHandle();
 		const cublasHandle_t& cuBlasHandle = detail::CublasHandle();
 
+		int err = -1;
 		switch (z.mathDomain)
 		{
 		case MathDomain::Float:
 		{
-			const int err = cublasScopy(cuBlasHandle, z.size, (float*)y.pointer, 1, (float*)z.pointer, 1);
-			if (err)
-				return err;
+			if (cublasScopy(cuBlasHandle, z.size, (float*)y.pointer, 1, (float*)z.pointer, 1))
+				return CudaKernelException::_InternalException;
 
 			const float _alpha = (float)alpha;
-			cusparseSaxpyi(cuSparseHandle, x.size, &_alpha, (float*)x.pointer, (int*)x.indices, (float*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+			err = cusparseSaxpyi(cuSparseHandle, x.size, &_alpha, (float*)x.pointer, (int*)x.indices, (float*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
 			break;
 		};
 		case MathDomain::Double:
 		{
-			const int err = cublasDcopy(cuBlasHandle, z.size, (double*)y.pointer, 1, (double*)z.pointer, 1);
-			if (err)
-				return err;
+			if (cublasDcopy(cuBlasHandle, z.size, (double*)y.pointer, 1, (double*)z.pointer, 1))
+				return CudaKernelException::_InternalException;
 
-			cusparseDaxpyi(cuSparseHandle, x.size, &alpha, (double*)x.pointer, (int*)x.indices, (double*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+			err = cusparseDaxpyi(cuSparseHandle, x.size, &alpha, (double*)x.pointer, (int*)x.indices, (double*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
 			break;
 		};;
 		default: 
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 		
 		cudaDeviceSynchronize(); // axpy is asynch!
+
+		if (err)
+			return err;
 		return cudaGetLastError();
 	}
 
@@ -80,7 +82,7 @@ EXTERN_C
 			break;
 		};;
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		if (err)
@@ -128,7 +130,7 @@ EXTERN_C
 			break;
 		}
 		default:
-			return -1;
+			return CudaKernelException::_NotImplementedException;
 		}
 
 		if (err)

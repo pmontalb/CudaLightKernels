@@ -9,16 +9,16 @@
 	CLASS& operator=(const CLASS& rhs) noexcept = default;\
 	CLASS& operator=(CLASS&& rhs) noexcept = default;\
 
-extern "C"
-{
 #ifdef __CUDACC__
-	#include <cublas_v2.h>
-	static const cublasOperation_t cublasOperation[] = { CUBLAS_OP_N, CUBLAS_OP_T };
+#include <cublas_v2.h>
+static const cublasOperation_t cublasOperation[] = { CUBLAS_OP_N, CUBLAS_OP_T };
 
-	#include <cusparse_v2.h>
-	static const cusparseOperation_t cusparseOperation[] = { CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_TRANSPOSE };
+#include <cusparse_v2.h>
+static const cusparseOperation_t cusparseOperation[] = { CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_TRANSPOSE };
 #endif
 
+extern "C"
+{
 	enum CudaKernelException
 	{
 		_NotImplementedException = -1,

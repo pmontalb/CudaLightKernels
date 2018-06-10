@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Flags.cuh"
+#include <assert.h>
 
 #define MAKE_DEFAULT_CONSTRUCTORS(CLASS)\
 	virtual ~CLASS() noexcept = default;\
@@ -113,12 +114,9 @@ EXTERN_C
 		MAKE_DEFAULT_CONSTRUCTORS(MemoryTile);
 
 	protected:
-		explicit MemoryTile(const ptr_t pointer = 0,
-			const unsigned nRows = 0,
-			const unsigned nCols = 0,
-			const unsigned size = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null)
+		explicit MemoryTile(const ptr_t pointer,
+			const unsigned nRows, const unsigned nCols, const unsigned size,
+			const MemorySpace memorySpace, const MathDomain mathDomain)
 			: MemoryBuffer(pointer, size, memorySpace, mathDomain), nRows(nRows), nCols(nCols)
 		{
 
@@ -204,6 +202,31 @@ EXTERN_C
 	static size_t GetTotalSize(const MemoryBuffer& memoryBuffer) noexcept
 	{
 		return memoryBuffer.TotalSize();
+	}
+
+	static void extractColumnBufferFromMatrix(MemoryTile& out, const MemoryTile& rhs, const unsigned column)
+	{
+		assert(column < rhs.nCols);
+		out = MemoryBuffer(rhs.pointer + column * rhs.nRows * rhs.ElementarySize(), rhs.nRows, rhs.memorySpace, rhs.mathDomain);
+	}
+
+	static void extractColumnBufferFromCube(MemoryTile& out, const MemoryCube& rhs, const unsigned matrix, const unsigned column)
+	{
+		assert(matrix < rhs.nCubes);
+		assert(column < rhs.nCols);
+		out = MemoryBuffer(rhs.pointer + rhs.nRows * (matrix * rhs.nCols + column)* rhs.ElementarySize(), 
+						 rhs.nRows,
+						 rhs.memorySpace, 
+						 rhs.mathDomain);
+	}
+
+	static void extractMatrixBufferFromCube(MemoryTile& out, const MemoryCube& rhs, const unsigned matrix)
+	{
+		assert(matrix < rhs.nCubes);
+		out = MemoryTile(rhs.pointer + matrix * rhs.nRows * rhs.nCols * rhs.ElementarySize(),
+					   rhs.nRows, rhs.nCols,
+					   rhs.memorySpace,
+					   rhs.mathDomain);
 	}
 }
 

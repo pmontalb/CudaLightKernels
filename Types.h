@@ -106,7 +106,7 @@ EXTERN_C
 		}
 
 		MemoryTile(const MemoryBuffer& buffer) noexcept
-			: MemoryBuffer(buffer), nRows(nRows), nCols(1)
+			: MemoryBuffer(buffer), nRows(buffer.size), nCols(1)
 		{
 
 		}
@@ -204,13 +204,13 @@ EXTERN_C
 		return memoryBuffer.TotalSize();
 	}
 
-	static void extractColumnBufferFromMatrix(MemoryTile& out, const MemoryTile& rhs, const unsigned column)
+	static void extractColumnBufferFromMatrix(MemoryBuffer& out, const MemoryTile& rhs, const unsigned column)
 	{
 		assert(column < rhs.nCols);
 		out = MemoryBuffer(rhs.pointer + column * rhs.nRows * rhs.ElementarySize(), rhs.nRows, rhs.memorySpace, rhs.mathDomain);
 	}
 
-	static void extractColumnBufferFromCube(MemoryTile& out, const MemoryCube& rhs, const unsigned matrix, const unsigned column)
+	static void extractColumnBufferFromCube(MemoryBuffer& out, const MemoryCube& rhs, const unsigned matrix, const unsigned column)
 	{
 		assert(matrix < rhs.nCubes);
 		assert(column < rhs.nCols);

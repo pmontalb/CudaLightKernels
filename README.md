@@ -23,5 +23,3 @@ This library should be changed not too often, so that once the binary is compile
 
 ## Kernels structure
 Since there's no name mangling, I decided to use the convention of having every function starting with a leading underscore. This way you can have a helper manager that defines the same function with no underscores that just wraps the kernel call and checks the return value.
-
-I provided basic functionality for allocating/deallocating buffers, and calling cuBlas/cuSparse kernels

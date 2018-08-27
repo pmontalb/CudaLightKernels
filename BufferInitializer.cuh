@@ -7,16 +7,22 @@
 EXTERN_C
 {
 	EXPORT int _Initialize(MemoryBuffer buf, const double value);
+    EXPORT int _InitializeRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double value);
 
 	EXPORT int _LinSpace(MemoryBuffer buf, const double x0, const double x1);
+	EXPORT int _LinSpaceRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double x0, const double x1);
 
 	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed);
+	EXPORT int _RandUniformRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 
 	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed);
+	EXPORT int _RandNormalRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 
 	EXPORT int _Eye(MemoryTile buf);
+	EXPORT int _EyeRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain);
 
 	EXPORT int _OnesUpperTriangular(MemoryTile buf);
+	EXPORT int _OnesUpperTriangularRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain);
 }
 
 

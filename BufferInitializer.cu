@@ -23,6 +23,11 @@ EXTERN_C
 
 		return cudaGetLastError();
 	}
+	EXPORT int _InitializeRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double value)
+	{
+		MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+		return _Initialize(buf, value);
+    }
 
 	EXPORT int _LinSpace(MemoryBuffer buf, const double x0, const double x1)
 	{
@@ -41,6 +46,11 @@ EXTERN_C
 		}
 
 		return cudaGetLastError();
+	}
+	EXPORT int _LinSpaceRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double x0, const double x1)
+	{
+		MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+		return _LinSpace(buf, x0, x1);
 	}
 
 	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed)
@@ -74,6 +84,11 @@ EXTERN_C
 
 		return cudaGetLastError();
 	}
+	EXPORT int _RandUniformRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed)
+	{
+		MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+		return _RandUniform(buf,seed);
+	}
 
 	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed)
 	{
@@ -106,6 +121,11 @@ EXTERN_C
 
 		return cudaGetLastError();
 	}
+	EXPORT int _RandNormalRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed)
+	{
+		MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+		return _RandNormal(buf, seed);
+	}
 
 	EXPORT int _Eye(MemoryTile buf)
 	{
@@ -126,6 +146,11 @@ EXTERN_C
 			
 		return cudaGetLastError();
 	}
+	EXPORT int _EyeRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		MemoryTile tile(pointer, nRows, nRows, memorySpace, mathDomain);
+		return _Eye(tile);
+	}
 
 	EXPORT int _OnesUpperTriangular(MemoryTile buf)
 	{
@@ -145,6 +170,11 @@ EXTERN_C
 		}
 
 		return cudaGetLastError();
+	}
+	EXPORT int _OnesUpperTriangularRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		MemoryTile tile(pointer, nRows, nRows, memorySpace, mathDomain);
+		return _OnesUpperTriangular(tile);
 	}
 }
 

@@ -35,6 +35,13 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 	}
+	EXPORT int _AddRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		MemoryBuffer _x(x, size, memorySpace, mathDomain);
+		MemoryBuffer _y(y, size, memorySpace, mathDomain);
+		return _Add(_z, _x, _y, alpha);
+	 }
 
 	/**
 	* z += x
@@ -56,6 +63,12 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 	}
+	EXPORT int _AddEqualRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		MemoryBuffer _x(x, size, memorySpace, mathDomain);
+		return _AddEqual(_z, _x, alpha);
+    }
 
 	/**
 	* A += alpha * B
@@ -93,6 +106,12 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 	}
+	EXPORT int _AddEqualMatrixRaw(const ptr_t A, const ptr_t B, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation, const MatrixOperation bOperation, const double alpha)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
+		return _AddEqualMatrix(_A, _B, aOperation, bOperation, alpha);
+	}
 
 	/**
 	* z *= alpha
@@ -112,6 +131,11 @@ EXTERN_C
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
+	}
+	EXPORT int _ScaleRaw(const ptr_t z, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		return _Scale(_z, alpha);
 	}
 
 	EXPORT int _ElementwiseProduct(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
@@ -161,6 +185,13 @@ EXTERN_C
 
 
 	}
+	EXPORT int _ElementwiseProductRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		MemoryBuffer _x(x, size, memorySpace, mathDomain);
+		MemoryBuffer _y(y, size, memorySpace, mathDomain);
+		return _ElementwiseProduct(_z, _x, _y, alpha);
+	}
 
 	EXPORT int _Multiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha)
 	{
@@ -194,6 +225,13 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 	}
+	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
+		MemoryTile _C(C, nRows, nCols, memorySpace, mathDomain);
+		return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha);
+	}
 
 	EXPORT int _Dot(MemoryBuffer y, const MemoryTile A, const MemoryBuffer x, const MatrixOperation aOperation, const double alpha)
 	{
@@ -226,6 +264,13 @@ EXTERN_C
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
+	}
+	EXPORT int _DotRaw(const ptr_t y, const ptr_t A, const ptr_t x, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation, const double alpha)
+	{
+		MemoryBuffer _x(x, nCols, memorySpace, mathDomain);
+		MemoryBuffer _y(y, nCols, memorySpace, mathDomain);
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		return _Dot(_y, _A, _x, aOperation, alpha);
 	}
 
 	EXPORT int _CumulativeRowSum(MemoryTile A)
@@ -302,7 +347,11 @@ EXTERN_C
 
 		return err;
 	}
-
+	EXPORT int _CumulativeRowSumRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		return _CumulativeRowSum(_A);
+	}
 	/**
 	* X such that A * X = b by means of LU factorization
 	*/
@@ -410,6 +459,12 @@ EXTERN_C
 
 		return err;
 	}
+	EXPORT int _SolveRaw(const ptr_t A, const ptr_t B, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
+		return _Solve(_A, _B, aOperation);
+	}
 
 	/**
 	* A = A^(-1) by means of LU factorization
@@ -451,5 +506,10 @@ EXTERN_C
 
 		cudaFree((void*)eye.pointer);
 		return err;
+	}
+	EXPORT int _InvertRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		return _Invert(_A, aOperation);
 	}
 }

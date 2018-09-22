@@ -140,6 +140,8 @@ EXTERN_C
 
 	EXPORT int _ElementwiseProduct(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
 	{
+#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
+
 		const cublasHandle_t& handle = detail::CublasHandle();
 
 		switch (z.mathDomain)
@@ -182,7 +184,24 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 
+#else
 
+		switch (z.mathDomain)
+		{
+			case MathDomain::Float:
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
+				break;
+			case MathDomain::Double:
+				CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
+				break;
+			case MathDomain::Int:
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+#endif // USE_NAIVE_ELEMENTWISE_PRODUCT
 
 	}
 	EXPORT int _ElementwiseProductRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
@@ -225,11 +244,11 @@ EXTERN_C
 			return CudaKernelException::_NotImplementedException;
 		}
 	}
-	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha)
+	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha)
 	{
-		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
-		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
-		MemoryTile _C(C, nRows, nCols, memorySpace, mathDomain);
+		MemoryTile _A(A, nRowsB, nColsC, memorySpace, mathDomain);
+		MemoryTile _B(B, nRowsB, nRowsC, memorySpace, mathDomain);
+		MemoryTile _C(C, nRowsC, nColsC, memorySpace, mathDomain);
 		return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha);
 	}
 
@@ -512,4 +531,15 @@ EXTERN_C
 		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
 		return _Invert(_A, aOperation);
 	}
+}
+
+template <typename T>
+GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, const T* RESTRICT y, const size_t sz, const T alpha)
+{
+	CUDA_FUNCTION_PROLOGUE
+	CUDA_FOR_LOOP_PROLOGUE
+
+		z[i] = x[i] * y[i] * alpha;
+
+	CUDA_FOR_LOOP_EPILOGUE
 }

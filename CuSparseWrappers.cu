@@ -41,6 +41,14 @@ EXTERN_C
 			return err;
 		return cudaGetLastError();
 	}
+    EXPORT int _SparseAddRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned nNonZeros, const ptr_t nonZeroIndices, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned size, const double alpha)
+    {
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		SparseMemoryBuffer _x(x, nNonZeros, nonZeroIndices, memorySpace, mathDomain);
+		MemoryBuffer _y(y, size, memorySpace, mathDomain);
+
+		return _SparseAdd(_z, _x, _y, alpha);
+    }
 
 	/**
 	*	yDense = ASparse * xDense
@@ -89,6 +97,17 @@ EXTERN_C
 			return err;
 		return cudaGetLastError();
 	}
+	EXPORT int _SparseDotRaw(const ptr_t y, const ptr_t A, const ptr_t x,
+						  const unsigned nNonZeros, const ptr_t nonZeroColumnIndices, const ptr_t nNonZeroRows,
+						  const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain,
+						  const MatrixOperation aOperation, const double alpha)
+	{
+		MemoryBuffer _y(y, nCols, memorySpace, mathDomain);
+		SparseMemoryTile _A(A, nNonZeros, nonZeroColumnIndices, nNonZeroRows, nRows, nCols, memorySpace, mathDomain);
+		MemoryBuffer _x(x, nCols, memorySpace, mathDomain);
+
+		return _SparseDot(_y, _A, _x, aOperation, alpha);
+    }
 
 	/**
 	*	ADense = BSparse * CDense
@@ -138,4 +157,15 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
+	EXPORT int _SparseMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C,
+								  const unsigned nNonZeros, const ptr_t nonZeroColumnIndices, const ptr_t nNonZeroRows,
+								  const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain,
+								  const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const double alpha)
+	{
+		MemoryTile _A(A, nRowsB, nColsC, memorySpace, mathDomain);
+		SparseMemoryTile _B(B, nNonZeros, nonZeroColumnIndices, nNonZeroRows, nRowsB, nRowsC, memorySpace, mathDomain);
+		MemoryTile _C(C, nRowsC, nColsC, memorySpace, mathDomain);
+
+		return _SparseMultiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, alpha);
+	}
 }

@@ -203,6 +203,7 @@ EXTERN_C
 
 #endif // USE_NAIVE_ELEMENTWISE_PRODUCT
 
+		return cudaGetLastError();
 	}
 	EXPORT int _ElementwiseProductRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
 	{

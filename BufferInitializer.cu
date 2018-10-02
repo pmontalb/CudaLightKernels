@@ -55,11 +55,8 @@ EXTERN_C
 
 	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed)
 	{
-		if (buf.size & 1)
-			return CudaKernelException::_ExpectedEvenSizeException;
-
 		dim3 block, grid;
-		const unsigned halfSz = buf.size >> 1;
+		const unsigned halfSz = (buf.size + 1) >> 1;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, halfSz);
 
 		curandState *states = 0;
@@ -71,10 +68,13 @@ EXTERN_C
 		switch (buf.mathDomain)
 		{
 		case MathDomain::Float:
-			CUDA_CALL_XYZ(__RandUniform__<float>, grid, block, block.x * sizeof(unsigned int), (float*)buf.pointer, states, halfSz);
+			CUDA_CALL_XYZ(__RandUniform__<float>, grid, block, block.x * sizeof(unsigned int), (float*)buf.pointer, states, halfSz, buf.size);
 			break;
 		case MathDomain::Double:
-			CUDA_CALL_XYZ(__RandUniform__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
+			CUDA_CALL_XYZ(__RandUniform__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz, buf.size);
+			break;
+		case MathDomain::Int:
+			CUDA_CALL_XYZ(__RandUniform__<int>, grid, block, block.x * sizeof(unsigned int), (int*)buf.pointer, states, halfSz, buf.size);
 			break;
 		default:
 			return CudaKernelException::_NotImplementedException;
@@ -92,9 +92,6 @@ EXTERN_C
 
 	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed)
 	{
-		if (buf.size & 1)
-			return CudaKernelException::_ExpectedEvenSizeException;
-
 		dim3 block, grid;
 		const unsigned halfSz = buf.size >> 1;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, halfSz);
@@ -108,10 +105,13 @@ EXTERN_C
 		switch (buf.mathDomain)
 		{
 		case MathDomain::Float:
-			CUDA_CALL_XYZ(__RandNormal__<float>, grid, block, block.x * sizeof(unsigned int), (float*)buf.pointer, states, halfSz);
+			CUDA_CALL_XYZ(__RandNormal__<float>, grid, block, block.x * sizeof(unsigned int), (float*)buf.pointer, states, halfSz, buf.size);
 			break;
 		case MathDomain::Double:
-			CUDA_CALL_XYZ(__RandNormal__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz);
+			CUDA_CALL_XYZ(__RandNormal__<double>, grid, block, block.x * sizeof(unsigned int), (double*)buf.pointer, states, halfSz, buf.size);
+			break;
+		case MathDomain::Int:
+			CUDA_CALL_XYZ(__RandNormal__<int>, grid, block, block.x * sizeof(unsigned int), (int*)buf.pointer, states, halfSz, buf.size);
 			break;
 		default:
 			return CudaKernelException::_NotImplementedException;
@@ -210,7 +210,7 @@ GLOBAL void __SetupCuRand__(CURAND_STATE_PTR states, const ptr_t sz, const unsig
 }
 
 template <typename T>
-GLOBAL void __RandUniform__(T* RESTRICT ptr, CURAND_STATE_PTR states, const ptr_t sz)
+GLOBAL void __RandUniform__(T* RESTRICT ptr, CURAND_STATE_PTR states, const unsigned sz, const unsigned fullSz)
 {
 	CUDA_FUNCTION_PROLOGUE
 
@@ -218,14 +218,15 @@ GLOBAL void __RandUniform__(T* RESTRICT ptr, CURAND_STATE_PTR states, const ptr_
 
 	CUDA_FOR_LOOP_PROLOGUE
 
-		ptr[2 * i] = curand_uniform(&localState);
-		ptr[2 * i + 1] = 1.0f - ptr[2 * i];
+		ptr[2 * i] = static_cast<T>(curand_uniform(&localState));
+	    if (2 * i + 1 < fullSz)
+			ptr[2 * i + 1] = static_cast<T>(1.0) - ptr[2 * i];
 
 	CUDA_FOR_LOOP_EPILOGUE
 }
 
 template <typename T>
-GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR states, const ptr_t sz)
+GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR states, const unsigned sz, const unsigned fullSz)
 {
 	CUDA_FUNCTION_PROLOGUE
 
@@ -233,8 +234,9 @@ GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR states, const ptr_t
 
 	CUDA_FOR_LOOP_PROLOGUE
 
-		ptr[2 * i] = curand_normal(&localState);
-		ptr[2 * i + 1] = -ptr[2 * i];
+		ptr[2 * i] = static_cast<T>(curand_normal(&localState));
+	    if (2 * i + 1 < fullSz)
+		    ptr[2 * i + 1] = -ptr[2 * i];
 
 	CUDA_FOR_LOOP_EPILOGUE
 }
@@ -245,14 +247,12 @@ GLOBAL void __Eye__(T* RESTRICT A, const size_t sz)
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int j = blockDim.y * blockIdx.y + threadIdx.y;
 
-	T one = static_cast<T>(1.0);
-	T zero = static_cast<T>(0.0);
 	if (j < sz && i < sz)
 	{
 		if (i == j)
-			A[i + sz * j] = one;
+			A[i + sz * j] = static_cast<T>(1.0);
 		else
-			A[i + sz * j] = zero;
+			A[i + sz * j] = static_cast<T>(0.0);
 	}
 }
 
@@ -262,13 +262,11 @@ GLOBAL void __OnesUpperTriangular__(T* RESTRICT A, size_t sz)
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	int j = blockDim.y * blockIdx.y + threadIdx.y;
 
-	T one = static_cast<T>(1.0);
-	T zero = static_cast<T>(0.0);
 	if (j < sz && i < sz)
 	{
 		if (i <= j)
-			A[i + sz * j] = one;
+			A[i + sz * j] = static_cast<T>(1.0);
 		else
-			A[i + sz * j] = zero;
+			A[i + sz * j] = static_cast<T>(0.0);
 	}
 }

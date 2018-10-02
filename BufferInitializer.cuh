@@ -37,10 +37,10 @@ GLOBAL void __LinSpace__(T* RESTRICT ptr, const ptr_t sz, const T x0, const T dx
 GLOBAL void __SetupCuRand__(CURAND_STATE_PTR state, const ptr_t sz, const unsigned seed);
 
 template <typename T>
-GLOBAL void __RandUniform__(T* RESTRICT ptr, CURAND_STATE_PTR state, const ptr_t sz);
+GLOBAL void __RandUniform__(T* RESTRICT ptr, CURAND_STATE_PTR state, const unsigned sz, const unsigned fullSz);
 
 template <typename T>
-GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR state, const ptr_t sz);
+GLOBAL void __RandNormal__(T* RESTRICT ptr, CURAND_STATE_PTR state, const unsigned sz, const unsigned fullSz);
 
 template <typename T>
 GLOBAL void __Eye__(T* RESTRICT ptr, const ptr_t sz);

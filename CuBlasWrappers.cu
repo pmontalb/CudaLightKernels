@@ -293,6 +293,32 @@ EXTERN_C
 		return _Dot(_y, _A, _x, aOperation, alpha);
 	}
 
+	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				const float _alpha = (float)alpha;
+				return cublasSger(handle, x.size, y.size, &_alpha, (float*)x.pointer, 1, (float*)y.pointer, 1, (float*)A.pointer, A.nRows);
+			}
+			case MathDomain::Double:
+			{
+				return cublasDger(handle, x.size, y.size, &alpha, (double*)x.pointer, 1, (double*)y.pointer, 1, (double*)A.pointer, A.nRows);
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+	}
+	EXPORT int _KroneckerProductRaw(const ptr_t A, const const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _x(x, nRows, memorySpace, mathDomain);
+		MemoryBuffer _y(y, nCols, memorySpace, mathDomain);
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		return _KroneckerProduct(_A, _x, _y, alpha);
+	}
+
 	EXPORT int _CumulativeRowSum(MemoryTile A)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();

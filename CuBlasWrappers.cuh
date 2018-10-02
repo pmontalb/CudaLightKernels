@@ -63,6 +63,13 @@ EXTERN_C
 	EXPORT int _DotRaw(const ptr_t y, const ptr_t A, const ptr_t x, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None, const double alpha = 1.0);
 
 	/**
+	*	A += alpha * x * y^T
+	*/
+	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha = 1.0);
+	EXPORT int _KroneckerProductRaw(const ptr_t A, const const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
+
+
+	/**
 	* A = cumsum(A)
 	*/
 	EXPORT int _CumulativeRowSum(MemoryTile A);

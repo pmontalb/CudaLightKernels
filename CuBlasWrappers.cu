@@ -311,7 +311,7 @@ EXTERN_C
 				return CudaKernelException::_NotImplementedException;
 		}
 	}
-	EXPORT int _KroneckerProductRaw(const ptr_t A, const const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	EXPORT int _KroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
 	{
 		MemoryBuffer _x(x, nRows, memorySpace, mathDomain);
 		MemoryBuffer _y(y, nCols, memorySpace, mathDomain);

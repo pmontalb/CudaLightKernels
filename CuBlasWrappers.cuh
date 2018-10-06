@@ -66,7 +66,7 @@ EXTERN_C
 	*	A += alpha * x * y^T
 	*/
 	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha = 1.0);
-	EXPORT int _KroneckerProductRaw(const ptr_t A, const const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
+	EXPORT int _KroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
 
 
 	/**

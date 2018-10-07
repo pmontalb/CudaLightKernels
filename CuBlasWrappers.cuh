@@ -86,6 +86,30 @@ EXTERN_C
 	*/
 	EXPORT int _Invert(MemoryTile A, const MatrixOperation aOperation = MatrixOperation::None);
 	EXPORT int _InvertRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None);
+
+	EXPORT int _ArgAbsMin(int& argMin, const MemoryBuffer x);
+	EXPORT int _ArgAbsMinRaw(int& argMin, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _ArgAbsMin(argMin, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
+
+	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x);
+	EXPORT int _ArgAbsMaxRaw(int& argMax, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _ArgAbsMax(argMax, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
+
+	EXPORT int _AbsMin(double& min, const MemoryBuffer x);
+	EXPORT int _AbsMinRaw(double& min, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _AbsMin(min, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
+
+	EXPORT int _AbsMax(double& max, const MemoryBuffer x);
+	EXPORT int _AbsMaxRaw(double& max, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _AbsMax(max, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
 }
 
 template <typename T>

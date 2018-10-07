@@ -558,6 +558,104 @@ EXTERN_C
 		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
 		return _Invert(_A, aOperation);
 	}
+
+	EXPORT int _ArgAbsMin(int& argMin, const MemoryBuffer x)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		int err = 0;
+		switch (x.mathDomain)
+		{
+			case MathDomain::Float:
+				err = cublasIsamin(handle, x.size, (float*)x.pointer, 1, &argMin);
+				break;
+			case MathDomain::Double:
+				err = cublasIdamin(handle, x.size, (double*)x.pointer, 1, &argMin);
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		if (err)
+			return err;
+
+		// cublasI<t>amin uses 1-indexed array
+		--argMin;
+		return cudaGetLastError();
+	}
+
+	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		int err = 0;
+		switch (x.mathDomain)
+		{
+			case MathDomain::Float:
+				err = cublasIsamax(handle, x.size, (float*)x.pointer, 1, &argMax);
+				break;
+			case MathDomain::Double:
+				err = cublasIdamax(handle, x.size, (double*)x.pointer, 1, &argMax);
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		if (err)
+			return err;
+
+		// cublasI<t>amax uses 1-indexed array
+		--argMax;
+		return cudaGetLastError();
+	}
+
+	EXPORT int _AbsMin(double& min, const MemoryBuffer x)
+	{
+		int argMin = -1;
+		int err = _ArgAbsMin(argMin, x);
+		if (err)
+			return err;
+
+		switch (x.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				float tmp;
+				cudaMemcpy(&tmp, ((float*)x.pointer) + argMin, sizeof(float), cudaMemcpyDeviceToHost);
+				min = tmp;
+				break;
+			}
+			case MathDomain::Double:
+				cudaMemcpy(&min, ((double*)x.pointer) + argMin, sizeof(double), cudaMemcpyDeviceToHost);
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		return cudaGetLastError();
+	}
+
+	EXPORT int _AbsMax(double& min, const MemoryBuffer x)
+	{
+		int argMax = -1;
+		int err = _ArgAbsMax(argMax, x);
+		if (err)
+			return err;
+
+		switch (x.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				float tmp;
+				cudaMemcpy(&tmp, ((float*)x.pointer) + argMax, sizeof(float), cudaMemcpyDeviceToHost);
+				min = tmp;
+				break;
+			}
+			case MathDomain::Double:
+				cudaMemcpy(&min, ((double*)x.pointer) + argMax, sizeof(double), cudaMemcpyDeviceToHost);
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		return cudaGetLastError();
+	}
 }
 
 template <typename T>

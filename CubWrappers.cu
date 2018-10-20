@@ -4,9 +4,9 @@
 EXTERN_C
 {
 	EXPORT int _Sum(double& sum, const MemoryBuffer v)
-    {
-	    void* cache = nullptr;
-		
+	{
+		void* cache = nullptr;
+
 		MemoryBuffer output(0, 1, v.memorySpace, v.mathDomain);
 		// Determine temporary device storage requirements
 		_Alloc(output);
@@ -16,7 +16,7 @@ EXTERN_C
 		switch (v.mathDomain)
 		{
 			case MathDomain::Float:
-			{				
+			{
 				cub::DeviceReduce::Sum(cache, temp_storage_bytes, (float*)v.pointer, (float*)output.pointer, v.size);
 
 				// Allocate temporary storage
@@ -24,7 +24,7 @@ EXTERN_C
 
 				// Run sum-reduction
 				cub::DeviceReduce::Sum(cache, temp_storage_bytes, (float*)v.pointer, (float*)output.pointer, v.size);
-				
+
 				float _sum;
 				cudaMemcpy(&_sum, (float*)output.pointer, sizeof(float), cudaMemcpyDeviceToHost);
 				sum = _sum;
@@ -68,5 +68,5 @@ EXTERN_C
 		_Free(output);
 
 		return cudaGetLastError();
-    }w
+	}
 }

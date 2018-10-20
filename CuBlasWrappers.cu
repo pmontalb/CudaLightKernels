@@ -580,6 +580,34 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
+	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer argMin, const MemoryTile A)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
+
+		int err = 0;
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+				for (size_t j = 0; j < A.nCols; ++j)
+					err = cublasIsamin(handle, A.nRows, (float*)(A.pointer + j * A.nRows * A.ElementarySize()), 1, (int*)(argMin.pointer + j * argMin.ElementarySize()));
+				break;
+			case MathDomain::Double:
+				for (size_t j = 0; j < A.nCols; ++j)
+					err = cublasIdamin(handle, A.nRows, (double*)(A.pointer + j * A.nRows * A.ElementarySize()), 1, (int*)(argMin.pointer + j * argMin.ElementarySize()));
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
+
+		if (err)
+			return err;
+
+		return cudaGetLastError();
+	}
+
 	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
@@ -601,6 +629,34 @@ EXTERN_C
 
 		// cublasI<t>amax uses 1-indexed array
 		--argMax;
+		return cudaGetLastError();
+	}
+
+	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer argMax, const MemoryTile A)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
+
+		int err = 0;
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+				for (size_t j = 0; j < A.nCols; ++j)
+					err = cublasIsamax(handle, A.nRows, (float*)(A.pointer + j * A.nRows * A.ElementarySize()), 1, (int*)(argMax.pointer + j * argMax.ElementarySize()));
+				break;
+			case MathDomain::Double:
+				for (size_t j = 0; j < A.nCols; ++j)
+					err = cublasIdamax(handle, A.nRows, (double*)(A.pointer + j * A.nRows * A.ElementarySize()), 1, (int*)(argMax.pointer + j * argMax.ElementarySize()));
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
+
+		if (err)
+			return err;
+
 		return cudaGetLastError();
 	}
 

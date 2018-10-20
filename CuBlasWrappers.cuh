@@ -93,10 +93,22 @@ EXTERN_C
 		return _ArgAbsMin(argMin, MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 
+	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer argMin, const MemoryTile A);
+	EXPORT int _ColumnWiseArgAbsMinRaw(const ptr_t argMin, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _ColumnWiseArgAbsMin(MemoryBuffer(argMin, nCols, memorySpace, mathDomain), MemoryTile(A, nRows, nCols, memorySpace, mathDomain));
+	}
+
 	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x);
 	EXPORT int _ArgAbsMaxRaw(int& argMax, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ArgAbsMax(argMax, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
+
+	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer argMax, const MemoryTile A);
+	EXPORT int _ColumnWiseArgAbsMaxRaw(const ptr_t argMax, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _ColumnWiseArgAbsMax(MemoryBuffer(argMax, nCols, memorySpace, mathDomain), MemoryTile(A, nRows, nCols, memorySpace, mathDomain));
 	}
 
 	EXPORT int _AbsMin(double& min, const MemoryBuffer x);

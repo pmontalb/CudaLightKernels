@@ -660,54 +660,22 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _AbsMin(double& min, const MemoryBuffer x)
+	EXPORT int _IsNonZero(MemoryBuffer z, const MemoryBuffer x)
 	{
-		int argMin = -1;
-		int err = _ArgAbsMin(argMin, x);
-		if (err)
-			return err;
-
-		switch (x.mathDomain)
+		switch (z.mathDomain)
 		{
 			case MathDomain::Float:
-			{
-				float tmp;
-				cudaMemcpy(&tmp, ((float*)x.pointer) + argMin, sizeof(float), cudaMemcpyDeviceToHost);
-				min = tmp;
+				CUDA_CALL_SINGLE(__IsNonZero__<float>, (float*)z.pointer, (float*)x.pointer, z.size);
 				break;
-			}
 			case MathDomain::Double:
-				cudaMemcpy(&min, ((double*)x.pointer) + argMin, sizeof(double), cudaMemcpyDeviceToHost);
+				CUDA_CALL_DOUBLE(__IsNonZero__<double>, (double*)z.pointer, (double*)x.pointer, z.size);
+				break;
+			case MathDomain::Int:
+				CUDA_CALL_SINGLE(__IsNonZero__<int>, (int*)z.pointer, (int*)x.pointer, z.size);
+				break;
 			default:
 				return CudaKernelException::_NotImplementedException;
 		}
-
-		return cudaGetLastError();
-	}
-
-	EXPORT int _AbsMax(double& min, const MemoryBuffer x)
-	{
-		int argMax = -1;
-		int err = _ArgAbsMax(argMax, x);
-		if (err)
-			return err;
-
-		switch (x.mathDomain)
-		{
-			case MathDomain::Float:
-			{
-				float tmp;
-				cudaMemcpy(&tmp, ((float*)x.pointer) + argMax, sizeof(float), cudaMemcpyDeviceToHost);
-				min = tmp;
-				break;
-			}
-			case MathDomain::Double:
-				cudaMemcpy(&min, ((double*)x.pointer) + argMax, sizeof(double), cudaMemcpyDeviceToHost);
-			default:
-				return CudaKernelException::_NotImplementedException;
-		}
-
-		return cudaGetLastError();
 	}
 }
 
@@ -718,6 +686,17 @@ GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, cons
 	CUDA_FOR_LOOP_PROLOGUE
 
 		z[i] = x[i] * y[i] * alpha;
+
+	CUDA_FOR_LOOP_EPILOGUE
+}
+
+template <typename T>
+GLOBAL void __IsNonZero__(T* RESTRICT z, const T* RESTRICT x, const size_t sz)
+{
+	CUDA_FUNCTION_PROLOGUE
+	CUDA_FOR_LOOP_PROLOGUE
+
+		z[i] = (x[i] > 1e-12 || x[i] < -1e-12) ? 1 : 0;
 
 	CUDA_FOR_LOOP_EPILOGUE
 }

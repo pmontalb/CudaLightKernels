@@ -93,6 +93,7 @@ EXTERN_C
 		return _ArgAbsMin(argMin, MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 
+	// NB: it returns 1-based indices
 	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer argMin, const MemoryTile A);
 	EXPORT int _ColumnWiseArgAbsMinRaw(const ptr_t argMin, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
@@ -105,24 +106,23 @@ EXTERN_C
 		return _ArgAbsMax(argMax, MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 
+	// NB: it returns 1-based indices
 	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer argMax, const MemoryTile A);
 	EXPORT int _ColumnWiseArgAbsMaxRaw(const ptr_t argMax, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ColumnWiseArgAbsMax(MemoryBuffer(argMax, nCols, memorySpace, mathDomain), MemoryTile(A, nRows, nCols, memorySpace, mathDomain));
 	}
 
-	EXPORT int _AbsMin(double& min, const MemoryBuffer x);
-	EXPORT int _AbsMinRaw(double& min, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	// z = { 1 if x == 0; 0 otherwise }
+	EXPORT int _IsNonZero(MemoryBuffer z, const MemoryBuffer x);
+	EXPORT int _IsNonZeroRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
-		return _AbsMin(min, MemoryBuffer(x, size, memorySpace, mathDomain));
-	}
-
-	EXPORT int _AbsMax(double& max, const MemoryBuffer x);
-	EXPORT int _AbsMaxRaw(double& max, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
-	{
-		return _AbsMax(max, MemoryBuffer(x, size, memorySpace, mathDomain));
+		return _IsNonZero(MemoryBuffer(z, size, memorySpace, mathDomain), MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 }
 
 template <typename T>
 GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, const T* RESTRICT y, const size_t sz, const T alpha = static_cast<T>(1.0));
+
+template <typename T>
+GLOBAL void __IsNonZero__(T* RESTRICT z, const T* RESTRICT x, const size_t sz);

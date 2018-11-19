@@ -31,6 +31,11 @@ EXTERN_C
 
 				return cublasDaxpy(handle, z.size, &alpha, (double*)x.pointer, 1, (double*)z.pointer, 1);
 			}
+		case MathDomain::Int:
+			{
+			    CUDA_CALL_SINGLE(__IntAffineOperationNaive__, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha, 1, 0);
+				return cudaGetLastError();
+			}
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
@@ -59,6 +64,9 @@ EXTERN_C
 		}
 		case MathDomain::Double:
 			return cublasDaxpy(handle, z.size, &alpha, (double*)x.pointer, 1, (double*)z.pointer, 1);
+		case MathDomain::Int:
+			CUDA_CALL_SINGLE(__IntAffineOperationNaive__, (int*)z.pointer, (int*)x.pointer, (int*)x.pointer, z.size, 0, (int)alpha, 1);
+			return cudaGetLastError();
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
@@ -127,6 +135,9 @@ EXTERN_C
 		}
 		case MathDomain::Double:
 			return cublasDscal(handle, z.size, &alpha, (double*)z.pointer, 1);
+		case MathDomain::Int:
+			CUDA_CALL_SINGLE(__IntAffineOperationNaive__, (int*)z.pointer, (int*)z.pointer, (int*)z.pointer, z.size, 0, 0, (int)alpha);
+			return cudaGetLastError();
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
@@ -676,6 +687,8 @@ EXTERN_C
 			default:
 				return CudaKernelException::_NotImplementedException;
 		}
+
+		return cudaGetLastError();
 	}
 }
 
@@ -696,7 +709,17 @@ GLOBAL void __IsNonZero__(T* RESTRICT z, const T* RESTRICT x, const size_t sz)
 	CUDA_FUNCTION_PROLOGUE
 	CUDA_FOR_LOOP_PROLOGUE
 
-		z[i] = (x[i] > 1e-12 || x[i] < -1e-12) ? 1 : 0;
+		z[i] = (x[i] > static_cast<T>(1e-12) || x[i] < static_cast<T>(-1e-12)) ? 1 : 0;
+
+	CUDA_FOR_LOOP_EPILOGUE
+}
+
+GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, const int* RESTRICT y, const size_t sz, const int alpha, const int beta, const int gamma)
+{
+	CUDA_FUNCTION_PROLOGUE
+	CUDA_FOR_LOOP_PROLOGUE
+
+		z[i] = alpha * x[i] + beta * y[i] + gamma * z[i];
 
 	CUDA_FOR_LOOP_EPILOGUE
 }

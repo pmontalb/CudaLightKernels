@@ -8,7 +8,7 @@
 	CLASS(const CLASS& rhs) noexcept = default;\
 	CLASS(CLASS&& rhs) noexcept = default;\
 	CLASS& operator=(const CLASS& rhs) noexcept = default;\
-	CLASS& operator=(CLASS&& rhs) noexcept = default;\
+	CLASS& operator=(CLASS&& rhs) noexcept = default\
 
 #ifdef __CUDACC__
 #include <cublas_v2.h>

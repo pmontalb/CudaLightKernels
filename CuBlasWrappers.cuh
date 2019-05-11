@@ -88,34 +88,34 @@ EXTERN_C
 	EXPORT int _InvertRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None);
 
 	EXPORT int _ArgAbsMin(int& argMin, const MemoryBuffer x);
-	EXPORT int _ArgAbsMinRaw(int& argMin, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	inline EXPORT int _ArgAbsMinRaw(int& argMin, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ArgAbsMin(argMin, MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 
 	// NB: it returns 1-based indices
 	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer argMin, const MemoryTile A);
-	EXPORT int _ColumnWiseArgAbsMinRaw(const ptr_t argMin, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
+	inline EXPORT int _ColumnWiseArgAbsMinRaw(const ptr_t argMin, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ColumnWiseArgAbsMin(MemoryBuffer(argMin, nCols, memorySpace, mathDomain), MemoryTile(A, nRows, nCols, memorySpace, mathDomain));
 	}
 
 	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x);
-	EXPORT int _ArgAbsMaxRaw(int& argMax, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	inline EXPORT int _ArgAbsMaxRaw(int& argMax, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ArgAbsMax(argMax, MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
 
 	// NB: it returns 1-based indices
 	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer argMax, const MemoryTile A);
-	EXPORT int _ColumnWiseArgAbsMaxRaw(const ptr_t argMax, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
+	inline EXPORT int _ColumnWiseArgAbsMaxRaw(const ptr_t argMax, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _ColumnWiseArgAbsMax(MemoryBuffer(argMax, nCols, memorySpace, mathDomain), MemoryTile(A, nRows, nCols, memorySpace, mathDomain));
 	}
 
 	// z = { 1 if x == 0; 0 otherwise }
 	EXPORT int _IsNonZero(MemoryBuffer z, const MemoryBuffer x);
-	EXPORT int _IsNonZeroRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	inline EXPORT int _IsNonZeroRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _IsNonZero(MemoryBuffer(z, size, memorySpace, mathDomain), MemoryBuffer(x, size, memorySpace, mathDomain));
 	}

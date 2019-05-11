@@ -16,6 +16,7 @@
     <CudaCompile Include="CuSparseWrappers.cu" />
     <CudaCompile Include="CubWrappers.cu" />
     <CudaCompile Include="DeviceManager.cu" />
+    <CudaCompile Include="ForgeHelpers.cu" />
     <CudaCompile Include="MemoryManager.cu" />
   </ItemGroup>
   <ItemGroup>
@@ -26,6 +27,7 @@
     <ClInclude Include="CubWrappers.cuh" />
     <ClInclude Include="DeviceManager.cuh" />
     <ClInclude Include="Flags.cuh" />
+    <ClInclude Include="ForgeHelpers.cuh" />
     <ClInclude Include="MemoryManager.cuh" />
     <ClInclude Include="Types.h" />
   </ItemGroup>
@@ -61,10 +63,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../cub</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../cub;../forge/include;../forge/build/include</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../cub</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);../cub;../forge/include;../forge/build/include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -88,6 +90,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <RuntimeChecks>RTC1</RuntimeChecks>
       <Optimization>Od</Optimization>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <Include>../cub;../forge/include;../forge/build/include</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -116,6 +119,7 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
       <Optimization>O3</Optimization>
       <FastMath>true</FastMath>
       <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <Include>../cub;../forge/include;../forge/build/include</Include>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

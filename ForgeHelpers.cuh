@@ -1,4 +1,6 @@
-#include "Common.cuh"
+#pragma once
+
+//#include "Common.cuh"
 #include "Flags.cuh"
 #include "Types.h"
 
@@ -20,6 +22,12 @@ EXTERN_C
 						 MemoryBuffer(y, nCols, memorySpace, mathDomain),
 						 MemoryTile(z, nRows, nCols, memorySpace, mathDomain));
 	}
+
+	EXPORT int _MakeRgbaJetColorMap(MemoryBuffer out, const MemoryBuffer in);
+	EXPORT int _MakeRgbaJetColorMapRaw(ptr_t out, const ptr_t in, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _MakeRgbaJetColorMap(MemoryBuffer(out, 4 * size, memorySpace, mathDomain), MemoryBuffer(in, size, memorySpace, mathDomain));
+	}
 }
 
 template <typename T>
@@ -27,3 +35,6 @@ GLOBAL void __MakePair__(float* RESTRICT z, const T* RESTRICT x, const T* RESTRI
 
 template <typename T>
 GLOBAL void __MakeTriple__(float* RESTRICT v, const T* RESTRICT x, const T* RESTRICT y, const T* RESTRICT z, const size_t nRows, const size_t nCols);
+
+template <typename T, typename V>
+GLOBAL void __MakeRgbaJetColorMap__(T* RESTRICT out, const V* RESTRICT in, const size_t sz);

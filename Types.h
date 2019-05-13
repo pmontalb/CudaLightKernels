@@ -40,7 +40,8 @@ EXTERN_C
 		Null,
 		Int,
 		Float,
-		Double
+		Double,
+		UnsignedChar,
 	};
 
 	enum class MatrixOperation : unsigned int
@@ -67,6 +68,8 @@ EXTERN_C
 				return sizeof(float);
 			case MathDomain::Int:
 				return sizeof(int);
+			case MathDomain::UnsignedChar:
+				return sizeof(unsigned char);
 			default:
 				return 0;
 			}

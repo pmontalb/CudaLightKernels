@@ -78,13 +78,13 @@ EXTERN_C
 		virtual size_t TotalSize() const noexcept
 		{
 			return size * ElementarySize();
-		};
+		}
 
-		MemoryBuffer(const ptr_t pointer = 0,
-			const unsigned size = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null)
-			: pointer(pointer), memorySpace(memorySpace), mathDomain(mathDomain), size(size)
+		MemoryBuffer(const ptr_t pointer_ = 0,
+			const unsigned size_ = 0,
+			const MemorySpace memorySpace_ = MemorySpace::Null,
+			const MathDomain mathDomain_ = MathDomain::Null)
+			: pointer(pointer_), memorySpace(memorySpace_), mathDomain(mathDomain_), size(size_)
 		{
 				
 		}
@@ -98,17 +98,17 @@ EXTERN_C
 		unsigned nRows;
 		unsigned nCols;
 
-		explicit MemoryTile(const ptr_t pointer = 0,
-			const unsigned nRows = 0,
-			const unsigned nCols = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null) noexcept
-			: MemoryBuffer(pointer, nRows * nCols, memorySpace, mathDomain), nRows(nRows), nCols(nCols)
+		explicit MemoryTile(const ptr_t pointer_ = 0,
+			const unsigned nRows_ = 0,
+			const unsigned nCols_ = 0,
+			const MemorySpace memorySpace_ = MemorySpace::Null,
+			const MathDomain mathDomain_ = MathDomain::Null) noexcept
+			: MemoryBuffer(pointer_, nRows_ * nCols_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_)
 		{
 
 		}
 
-		MemoryTile(const MemoryBuffer& buffer) noexcept
+		explicit MemoryTile(const MemoryBuffer& buffer) noexcept
 			: MemoryBuffer(buffer), nRows(buffer.size), nCols(1)
 		{
 
@@ -117,10 +117,10 @@ EXTERN_C
 		MAKE_DEFAULT_CONSTRUCTORS(MemoryTile);
 
 	protected:
-		explicit MemoryTile(const ptr_t pointer,
-			const unsigned nRows, const unsigned nCols, const unsigned size,
-			const MemorySpace memorySpace, const MathDomain mathDomain)
-			: MemoryBuffer(pointer, size, memorySpace, mathDomain), nRows(nRows), nCols(nCols)
+		explicit MemoryTile(const ptr_t pointer_,
+			const unsigned nRows_, const unsigned nCols_, const unsigned size_,
+			const MemorySpace memorySpace_, const MathDomain mathDomain_)
+			: MemoryBuffer(pointer_, size_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_)
 		{
 
 		}
@@ -131,18 +131,18 @@ EXTERN_C
 	public:
 		unsigned nCubes;
 
-		explicit MemoryCube(const ptr_t pointer = 0,
-			const unsigned nRows = 0,
-			const unsigned nCols = 0,
-			const unsigned nCubes = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null) noexcept
-			: MemoryTile(pointer, nRows, nCols, nRows * nCols * nCubes, memorySpace, mathDomain), nCubes(nCubes)
+		explicit MemoryCube(const ptr_t pointer_ = 0,
+			const unsigned nRows_ = 0,
+			const unsigned nCols_ = 0,
+			const unsigned nCubes_ = 0,
+			const MemorySpace memorySpace_ = MemorySpace::Null,
+			const MathDomain mathDomain_ = MathDomain::Null) noexcept
+			: MemoryTile(pointer_, nRows_, nCols_, nRows_ * nCols_ * nCubes_, memorySpace_, mathDomain_), nCubes(nCubes_)
 		{
 
 		}
 
-		MemoryCube(const MemoryTile& tile) noexcept
+		explicit MemoryCube(const MemoryTile& tile) noexcept
 			: MemoryTile(tile), nCubes(1)
 		{
 
@@ -156,12 +156,12 @@ EXTERN_C
 	public:
 		ptr_t indices;
 
-		SparseMemoryBuffer(const ptr_t pointer = 0,
-			const unsigned nNonZeros = 0,
-			const ptr_t indices = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null)
-			: MemoryBuffer(pointer, nNonZeros, memorySpace, mathDomain), indices(indices)
+		explicit SparseMemoryBuffer(const ptr_t pointer_ = 0,
+			const unsigned nNonZeros_ = 0,
+			const ptr_t indices_ = 0,
+			const MemorySpace memorySpace_ = MemorySpace::Null,
+			const MathDomain mathDomain_ = MathDomain::Null)
+			: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_), indices(indices_)
 		{
 				
 		}
@@ -180,16 +180,16 @@ EXTERN_C
 		unsigned nRows;
 		unsigned nCols;
 
-		SparseMemoryTile(const ptr_t pointer = 0,
-			const unsigned nNonZeros = 0,
-			const ptr_t nonZeroColumnIndices = 0,
-		    const ptr_t nNonZeroRows = 0,
-			const unsigned nRows = 0,
-			const unsigned nCols = 0,
-			const MemorySpace memorySpace = MemorySpace::Null,
-			const MathDomain mathDomain = MathDomain::Null)
-			: MemoryBuffer(pointer, nNonZeros, memorySpace, mathDomain),
-				nonZeroColumnIndices(nonZeroColumnIndices), nNonZeroRows(nNonZeroRows), nRows(nRows), nCols(nCols)
+		explicit SparseMemoryTile(const ptr_t pointer_ = 0,
+			const unsigned nNonZeros_ = 0,
+			const ptr_t nonZeroColumnIndices_ = 0,
+		    const ptr_t nNonZeroRows_ = 0,
+			const unsigned nRows_ = 0,
+			const unsigned nCols_ = 0,
+			const MemorySpace memorySpace_ = MemorySpace::Null,
+			const MathDomain mathDomain_ = MathDomain::Null)
+			: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_),
+				nonZeroColumnIndices(nonZeroColumnIndices_), nNonZeroRows(nNonZeroRows_), nRows(nRows_), nCols(nCols_)
 		{
 				
 		}

@@ -13,6 +13,8 @@
 #pragma warning Unknown dynamic link import/export semantics.
 #endif
 
+#include <cstddef>
+
 #define EXTERN_C extern "C"
 
 #ifdef __CUDACC__

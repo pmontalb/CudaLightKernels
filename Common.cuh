@@ -2,4 +2,11 @@
 
 #include "cuda.h"
 #include "cublas.h"
-#include <windows.h>
+
+#ifdef __linux__
+
+#elif _WIN32
+    #include <windows.h>
+#else
+
+#endif

@@ -1,6 +1,17 @@
 #pragma once
 
-#define EXPORT __declspec(dllexport)
+#if defined(_MSC_VER)
+    #define EXPORT __declspec(dllexport)
+    #define IMPORT __declspec(dllimport)
+#elif defined(__GNUC__)
+    #define EXPORT __attribute__((visibility("default")))
+    #define IMPORT
+#else
+//  do nothing and hope for the best?
+#define EXPORT
+#define IMPORT
+#pragma warning Unknown dynamic link import/export semantics.
+#endif
 
 #define EXTERN_C extern "C"
 
@@ -52,3 +63,4 @@
 
 #define CUDA_FOR_LOOP_EPILOGUE\
 	}
+

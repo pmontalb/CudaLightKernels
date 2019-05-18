@@ -5,3 +5,6 @@ Debug
 /.vs/CudaLightKernels/v15/*.opendb
 Release
 *.ipch
+.idea
+cmake-build-*
+

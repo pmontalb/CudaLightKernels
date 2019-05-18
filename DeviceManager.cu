@@ -1,7 +1,5 @@
-#include "Devicemanager.cuh"
+#include "DeviceManager.cuh"
 #include <stdio.h>
-
-#pragma region Helpers
 
 // Beginning of GPU Architecture definitions
 inline int _ConvertSMVer2Cores(int major, int minor)
@@ -46,8 +44,6 @@ inline int _ConvertSMVer2Cores(int major, int minor)
 	printf("MapSMtoCores for SM %d.%d is undefined.  Default to use %d Cores/SM\n", major, minor, nGpuArchCoresPerSM[index - 1].Cores);
 	return nGpuArchCoresPerSM[index - 1].Cores;
 }
-
-#pragma endregion
 
 EXTERN_C
 {

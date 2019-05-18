@@ -88,7 +88,7 @@ EXTERN_C
 
 	EXPORT int _Free(const MemoryBuffer buf)
 	{
-		cudaThreadSynchronize();
+		cudaDeviceSynchronize();
 		return cudaFree((void *)buf.pointer);
 	}
 	EXPORT int _FreeRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)

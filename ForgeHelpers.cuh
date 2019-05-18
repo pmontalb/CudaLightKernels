@@ -35,6 +35,3 @@ GLOBAL void __MakePair__(float* RESTRICT z, const T* RESTRICT x, const T* RESTRI
 
 template <typename T>
 GLOBAL void __MakeTriple__(float* RESTRICT v, const T* RESTRICT x, const T* RESTRICT y, const T* RESTRICT z, const size_t nRows, const size_t nCols);
-
-template <typename T, typename V>
-GLOBAL void __MakeRgbaJetColorMap__(T* RESTRICT out, const V* RESTRICT in, const size_t sz);

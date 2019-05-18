@@ -1,5 +1,79 @@
 #include "ForgeHelpers.cuh"
 
+// this assumes the in array has been normalised in [0-1]
+template <typename T, typename V>
+GLOBAL void __MakeRgbaJetColorMap__(T* RESTRICT out, const V* RESTRICT in, const size_t sz)
+{
+    CUDA_FUNCTION_PROLOGUE
+
+    CUDA_FOR_LOOP_PROLOGUE
+        float r = 0.0f, g = 0.0f, b = 0.0f;
+
+        if (in[i] < 0.25f)
+        {
+            r = b = 0.0f;
+            g = 4.0f * in[i];
+        }
+        else if (in[i] < 0.5f)
+        {
+            r = g = 0.0f;
+            b = 1.0f + 4.0f * (.25f - in[i]);
+        }
+        else if (in[i] < 0.75)
+        {
+            r = 4.0f * (in[i] - 0.5f);
+            b = g = 0.0f;
+        }
+        else
+        {
+            g = 1.0f + 4.0f * (0.75f - in[i]);
+            b = r = 0.0f;
+        }
+
+        out[i * 4 + 0] = static_cast<T>(r);
+        out[i * 4 + 1] = static_cast<T>(b);
+        out[i * 4 + 2] = static_cast<T>(g);
+        out[i * 4 + 3] = 1.0;
+    CUDA_FOR_LOOP_EPILOGUE
+}
+
+// this assumes the in array has been normalised in [0-1]
+template <typename V>
+GLOBAL void  __MakeRgbaJetColorMap__(unsigned char* RESTRICT out, const V* RESTRICT in, const size_t sz)
+{
+    CUDA_FUNCTION_PROLOGUE
+
+    CUDA_FOR_LOOP_PROLOGUE
+        float r = 0.0f, g = 0.0f, b = 0.0f;
+
+        if (in[i] < 0.25f)
+        {
+            r = b = 0.0f;
+            g = 4.0f * in[i];
+        }
+        else if (in[i] < 0.5f)
+        {
+            r = g = 0.0f;
+            b = 1.0f + 4.0f * (.25f - in[i]);
+        }
+        else if (in[i] < 0.75)
+        {
+            r = 4.0f * (in[i] - 0.5f);
+            b = g = 0.0f;
+        }
+        else
+        {
+            g = 1.0f + 4.0f * (0.75f - in[i]);
+            b = r = 0.0f;
+        }
+
+        out[i * 4 + 0] = static_cast<unsigned char>(255 * r);
+        out[i * 4 + 1] = static_cast<unsigned char>(255 * b);
+        out[i * 4 + 2] = static_cast<unsigned char>(255 * g);
+        out[i * 4 + 3] = 255;
+    CUDA_FOR_LOOP_EPILOGUE
+}
+
 EXTERN_C
 {
 	EXPORT int _MakePair(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y)
@@ -149,78 +223,4 @@ GLOBAL void __MakeTriple__(float* RESTRICT v, const T* RESTRICT x, const T* REST
 			v[3 * offset + 2] = z[i + j * nRows];
 		}
 	}
-}
-
-// this assumes the in array has been normalised in [0-1]
-template <typename T, typename V>
-GLOBAL void __MakeRgbaJetColorMap__(T* RESTRICT out, const V* RESTRICT in, const size_t sz)
-{
-	CUDA_FUNCTION_PROLOGUE
-
-		CUDA_FOR_LOOP_PROLOGUE
-		float r = 0.0f, g = 0.0f, b = 0.0f;
-
-		if (in[i] < 0.25f)
-		{
-			r = b = 0.0f;
-			g = 4.0f * in[i];
-		}
-		else if (in[i] < 0.5f)
-		{
-			r = g = 0.0f;
-			b = 1.0f + 4.0f * (.25f - in[i]);
-		}
-		else if (in[i] < 0.75)
-		{
-			r = 4.0f * (in[i] - 0.5f);
-			b = g = 0.0f;
-		}
-		else
-		{
-			g = 1.0f + 4.0f * (0.75f - in[i]);
-			b = r = 0.0f;
-		}
-
-		out[i * 4 + 0] = static_cast<T>(r);
-		out[i * 4 + 1] = static_cast<T>(b);
-		out[i * 4 + 2] = static_cast<T>(g);
-		out[i * 4 + 3] = 1.0;
-	CUDA_FOR_LOOP_EPILOGUE
-}
-
-// this assumes the in array has been normalised in [0-1]
-template <typename V>
-GLOBAL void __MakeRgbaJetColorMap__<unsigned char, V>(unsigned char* RESTRICT out, const V* RESTRICT in, const size_t sz)
-{
-	CUDA_FUNCTION_PROLOGUE
-
-		CUDA_FOR_LOOP_PROLOGUE
-		float r = 0.0f, g = 0.0f, b = 0.0f;
-
-		if (in[i] < 0.25f)
-		{
-			r = b = 0.0f;
-			g = 4.0f * in[i];
-		}
-		else if (in[i] < 0.5f)
-		{
-			r = g = 0.0f;
-			b = 1.0f + 4.0f * (.25f - in[i]);
-		}
-		else if (in[i] < 0.75)
-		{
-			r = 4.0f * (in[i] - 0.5f);
-			b = g = 0.0f;
-		}
-		else
-		{
-			g = 1.0f + 4.0f * (0.75f - in[i]);
-			b = r = 0.0f;
-		}
-
-		out[i * 4 + 0] = static_cast<unsigned char>(255 * r);
-		out[i * 4 + 1] = static_cast<unsigned char>(255 * b);
-		out[i * 4 + 2] = static_cast<unsigned char>(255 * g);
-		out[i * 4 + 3] = 255;
-	CUDA_FOR_LOOP_EPILOGUE
 }

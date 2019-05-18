@@ -7,4 +7,11 @@ Release
 *.ipch
 .idea
 cmake-build-*
+CMakeCache.txt
+CMakeFiles/
+*.cbp
+Makefile
+cmake_install.cmake
+*.a
+*.swp
 

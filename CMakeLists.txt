@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-#
+
+set(CMAKE_CUDA_COMPILER /usr/local/cuda-10.1/bin/nvcc CACHE PATH "" FORCE)
+
 include(CheckLanguage)
 check_language(CUDA)
 #
@@ -42,6 +44,7 @@ add_library(
     MemoryManager.cu
     MemoryManager.cuh
 )
+target_link_libraries(CudaLightKernels -lcudart -lcublas -lcusolver -lcusparse)
 
 # computational capability
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -gencode arch=compute_61,code=sm_61>)

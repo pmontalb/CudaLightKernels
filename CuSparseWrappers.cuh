@@ -16,7 +16,7 @@ EXTERN_C
 	/**
 	* zDense = yDense - xSparse
 	*/
-	EXPORT int _SparseSubtract(MemoryBuffer z, const SparseMemoryBuffer x, const MemoryBuffer y) { return _SparseAdd(z, x, y, -1.0); }
+	EXPORT int _SparseSubtract(MemoryBuffer z, const SparseMemoryBuffer x, const MemoryBuffer y);
 	inline EXPORT int _SparseSubtractRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned nNonZeros, const ptr_t nonZeroIndices, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned size)
 	{
 	    return _SparseAddRaw(z, x, y, nNonZeros, nonZeroIndices, memorySpace, mathDomain, size, -1.0);

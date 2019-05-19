@@ -1,3 +1,5 @@
+include_guard()
+
 cmake_minimum_required(VERSION 3.14)
 
 set(CMAKE_CUDA_COMPILER /usr/local/cuda-10.1/bin/nvcc CACHE PATH "" FORCE)
@@ -13,7 +15,6 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 project(CudaLightKernels CUDA)
 
 include_directories(.)
-include_directories(../CudaLightKernels)
 include_directories(../cub-1.8.0)
 
 add_library(

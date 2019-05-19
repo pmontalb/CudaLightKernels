@@ -17,7 +17,7 @@ EXTERN_C
 	/**
 	* z = x - y
 	*/
-	EXPORT int _Subtract(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y) { return _Add(z, y, x, -1.0); }
+	EXPORT int _Subtract(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y);
 	inline EXPORT int _SubtractRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain) { return _AddRaw(z, y, x, size, memorySpace, mathDomain, -1.0); }
 
 	/**
@@ -35,7 +35,7 @@ EXTERN_C
 	/**
 	* z -= x
 	*/
-	EXPORT int _SubtractEqual(MemoryBuffer z, const MemoryBuffer x) { return _AddEqual(z, x, -1.0); };
+	EXPORT int _SubtractEqual(MemoryBuffer z, const MemoryBuffer x);
 	inline EXPORT int _SubtractEqualRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain) { return _AddEqualRaw(z, x, size, memorySpace, mathDomain, -1.0); };
 
 	/**

@@ -78,6 +78,17 @@ EXTERN_C
 		return _AddEqual(_z, _x, alpha);
     }
 
+    EXPORT int _Subtract(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y)
+    {
+        return _Add(z, y, x, -1.0);
+    }
+
+    EXPORT int _SubtractEqual(MemoryBuffer z, const MemoryBuffer x)
+    {
+        return _AddEqual(z, x, -1.0);
+    }
+
+
 	/**
 	* A += alpha * B
 	*/

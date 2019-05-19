@@ -50,6 +50,11 @@ EXTERN_C
 		return _SparseAdd(_z, _x, _y, alpha);
     }
 
+    EXPORT int _SparseSubtract(MemoryBuffer z, const SparseMemoryBuffer x, const MemoryBuffer y)
+    {
+	    return _SparseAdd(z, x, y, -1.0);
+    }
+
 	/**
 	*	yDense = ASparse * xDense
 	*/

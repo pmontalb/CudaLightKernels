@@ -14,9 +14,6 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 project(CudaLightKernels CUDA)
 
-include_directories(.)
-include_directories(../cub-1.8.0)
-
 add_library(
     CudaLightKernels
 
@@ -45,6 +42,8 @@ add_library(
     MemoryManager.cu
     MemoryManager.cuh
 )
+target_include_directories(CudaLightKernels PUBLIC .)
+target_include_directories(CudaLightKernels PUBLIC ../cub-1.8.0)
 target_link_libraries(CudaLightKernels -lcudart -lcublas -lcusolver -lcusparse)
 
 # computational capability

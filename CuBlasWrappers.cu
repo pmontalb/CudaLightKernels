@@ -701,6 +701,28 @@ EXTERN_C
 
 		return cudaGetLastError();
 	}
+
+	EXPORT int _EuclideanNorm(double& norm, const MemoryBuffer x)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		
+		switch (x.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				auto _norm = (float)norm;
+				int err = cublasSnrm2(handle, x.size, (float*)x.pointer, 1, &_norm);
+				
+				norm = _norm;
+				return err;
+			}
+			case MathDomain::Double:
+				return cublasDnrm2(handle, x.size, (double*)x.pointer, 1, &norm);
+			case MathDomain::Int:
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+	}
 }
 
 template <typename T>

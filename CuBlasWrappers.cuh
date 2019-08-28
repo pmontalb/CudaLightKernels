@@ -119,6 +119,13 @@ EXTERN_C
 	{
 		return _IsNonZero(MemoryBuffer(z, size, memorySpace, mathDomain), MemoryBuffer(x, size, memorySpace, mathDomain));
 	}
+
+	// norm = ||x||_2
+	EXPORT int _EuclideanNorm(double& norm, const MemoryBuffer x);
+	inline EXPORT int _EuclideanNormRaw(double& norm, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		return _EuclideanNorm(norm, MemoryBuffer(x, size, memorySpace, mathDomain));
+	}
 }
 
 // z = alpha * x + beta * y + gamma * z

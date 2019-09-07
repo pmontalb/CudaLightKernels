@@ -100,13 +100,13 @@ EXTERN_C
 		{
 		case MathDomain::Float:
 		{
-			const float _alpha = (float)beta;
-			const float beta = (float)alpha;
+			const float _alpha = (float)alpha;
+			const float _beta = (float)beta;
 			return cublasSgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
 				(float*)A.pointer, A.nRows,
-				&beta,
+				&_beta,
 				(float*)B.pointer, A.nRows,
 				(float*)A.pointer, A.nRows);
 		}
@@ -114,9 +114,9 @@ EXTERN_C
 		{
 			return cublasDgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
-				&beta,
-				(double*)A.pointer, A.nRows,
 				&alpha,
+				(double*)A.pointer, A.nRows,
+				&beta,
 				(double*)B.pointer, A.nRows,
 				(double*)A.pointer, A.nRows);
 		}

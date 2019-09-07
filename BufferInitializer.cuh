@@ -6,6 +6,9 @@
 
 EXTERN_C
 {
+	EXPORT int _Zero(MemoryBuffer buf);
+	EXPORT int _ZeroRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain);
+	
 	EXPORT int _Initialize(MemoryBuffer buf, const double value);
     EXPORT int _InitializeRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double value);
 

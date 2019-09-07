@@ -55,5 +55,11 @@ target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -m64
 # no aliasing
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -restrict>)
 
+# optimization flags
+target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xptxas -O3>)
+
+# fast math (use intrinsics!)
+target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --use_fast_math>)
+
 # host warnings
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --compiler-options -Wall>)

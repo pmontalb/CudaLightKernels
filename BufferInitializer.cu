@@ -1,9 +1,19 @@
 #include "BufferInitializer.cuh"
 #include "DeviceManager.cuh"
-#include <stdio.h>
 
 EXTERN_C
 {
+	EXPORT int _Zero(MemoryBuffer buf)
+	{
+		cudaMemset((void*)(buf.pointer), 0, buf.TotalSize());
+		return cudaGetLastError();
+	}
+	EXPORT int _ZeroRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+	{
+		MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+		return _Zero(buf);
+	}
+
 	EXPORT int _Initialize(MemoryBuffer buf, const double value)
 	{
 		switch (buf.mathDomain)

@@ -55,11 +55,16 @@ target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -m64
 # no aliasing
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -restrict>)
 
-# optimization flags
-target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xptxas -O3>)
+OPTION(USE_FAST_MATH "Use --use_fast_math" OFF)
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    # optimization flags
+    target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -Xptxas -O3>)
 
-# fast math (use intrinsics!)
-target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --use_fast_math>)
+    if (USE_FAST_MATH)
+        # fast math (use intrinsics!)
+        target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --use_fast_math>)
+    endif()
+endif()
 
 # host warnings
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --compiler-options -Wall>)

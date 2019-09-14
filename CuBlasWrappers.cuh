@@ -67,8 +67,7 @@ EXTERN_C
 	*/
 	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha = 1.0);
 	EXPORT int _KroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
-
-
+	
 	/**
 	* A = cumsum(A)
 	*/
@@ -76,8 +75,20 @@ EXTERN_C
 	EXPORT int _CumulativeRowSumRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain);
 
 	/**
-	* X such that A * X = B by means of LU factorization
+	* x = sum(A[:, ])
 	*/
+	EXPORT int _RowWiseSum(MemoryBuffer x, const MemoryTile A, MemoryBuffer cache = MemoryBuffer());
+	EXPORT int _RowWiseSumRaw(const ptr_t x, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cache = 0);
+
+	/**
+* x = sum(A[:, ])
+*/
+	EXPORT int _CubeWiseSum(MemoryTile A, const MemoryCube T, MemoryCube cacheReshape = MemoryCube(), MemoryBuffer cacheOnes = MemoryBuffer());
+	EXPORT int _CubeWiseSumRaw(const ptr_t A, const ptr_t T, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cacheReshape = 0, const ptr_t cacheOnes = 0);
+
+/**
+* X such that A * X = B by means of LU factorization
+*/
 	EXPORT int _Solve(const MemoryTile A, MemoryTile B, const MatrixOperation aOperation = MatrixOperation::None);
 	EXPORT int _SolveRaw(const ptr_t A, const ptr_t B, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None);
 
@@ -136,3 +147,6 @@ GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, cons
 
 template <typename T>
 GLOBAL void __IsNonZero__(T* RESTRICT z, const T* RESTRICT x, const size_t sz);
+
+template <typename T>
+GLOBAL void __Reshape__(T* RESTRICT out, const T* RESTRICT in, const size_t nRows, const size_t nCols, const size_t nCubes);

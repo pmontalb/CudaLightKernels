@@ -1,6 +1,7 @@
 #include "CuBlasWrappers.cuh"
 #include "DeviceManager.cuh"
 #include "BufferInitializer.cuh"
+#include "MemoryManager.cuh"
 #include <cublas.h>
 
 EXTERN_C
@@ -417,6 +418,126 @@ EXTERN_C
 		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
 		return _CumulativeRowSum(_A);
 	}
+
+	/**
+	* x = sum(A[:, ])
+	*/
+	EXPORT int _RowWiseSum(MemoryBuffer x, const MemoryTile A, MemoryBuffer cache)
+	{
+		if (cache.size != A.nCols)
+		{
+			if (cache.pointer != 0)
+				_Free(cache);
+			cache.pointer = 0;
+		}
+		
+		if (cache.pointer == 0)
+		{
+			cache = MemoryBuffer(cache.pointer, A.nCols, A.memorySpace, A.mathDomain);
+			_Alloc(cache);
+			_Initialize(cache, 1.0);
+		}
+		
+		return _Dot(x, A, cache);
+	}
+	EXPORT int _RowWiseSumRaw(const ptr_t x, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cache)
+	{
+		MemoryBuffer _x(x, nRows, memorySpace, mathDomain);
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		MemoryBuffer _cache(cache, nCols, memorySpace, mathDomain);
+		return _RowWiseSum(_x, _A, _cache);
+	}
+
+	/**
+	* x = sum(A[:, :, ])
+	*/
+	EXPORT int _CubeWiseSum(MemoryTile A, const MemoryCube T, MemoryCube cacheReshape, MemoryBuffer cacheOnes)
+	{
+		if (cacheOnes.size != T.nCubes)
+		{
+			if (cacheOnes.pointer != 0)
+				_Free(cacheOnes);
+			cacheOnes.pointer = 0;
+		}
+		
+		if (cacheOnes.pointer == 0)
+		{
+			cacheOnes = MemoryBuffer(cacheOnes.pointer, T.nCubes, T.memorySpace, T.mathDomain);
+			_Alloc(cacheOnes);
+			_Initialize(cacheOnes, 1.0);
+		}
+		
+		// reshape T into nCols blocks of [nRows * nCubes]
+		if (cacheReshape.nRows != T.nRows || cacheReshape.nCols != T.nCubes || cacheReshape.nCubes != T.nCols)
+		{
+			if (cacheReshape.pointer != 0)
+				_Free(cacheReshape);
+			cacheReshape.pointer = 0;
+		}
+		
+		if (cacheReshape.pointer == 0)
+		{
+			cacheReshape = MemoryCube(cacheOnes.pointer, T.nRows, T.nCubes, T.nCols, T.memorySpace, T.mathDomain);
+			_Alloc(cacheOnes);
+		}
+		
+		int err = cudaGetLastError();
+		if (err)
+			return err;
+		
+		const cublasHandle_t& handle = detail::CublasHandle();
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				CUDA_CALL_SINGLE(__Reshape__<float>, (float*)cacheReshape.pointer, (float*)T.pointer, T.nRows, T.nCols, T.nCubes);
+				err = cudaGetLastError();
+				if (err)
+					return err;
+				
+				float alpha = 1.0;
+				float beta = 0.0;
+				
+				return cublasSgemmStridedBatched(handle,
+						                         cublasOperation_t::CUBLAS_OP_N, cublasOperation_t::CUBLAS_OP_N,
+						                         T.nRows, 1, T.nCubes,
+						                         &alpha,
+						                         (float*)cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nRows * cacheReshape.nCols,
+						                         (float*)cacheOnes.pointer, cacheOnes.size, 0,
+						                         &beta,
+						                         (float*)A.pointer, A.nRows, A.nRows, T.nCols);
+			}
+			case MathDomain::Double:
+			{
+				CUDA_CALL_DOUBLE(__Reshape__<double>, (double*)cacheReshape.pointer, (double*)T.pointer, T.nRows, T.nCols, T.nCubes);
+				err = cudaGetLastError();
+				if (err)
+					return err;
+				
+				double alpha = 1.0;
+				double beta = 0.0;
+				return cublasDgemmStridedBatched(handle,
+				                                 cublasOperation_t::CUBLAS_OP_N, cublasOperation_t::CUBLAS_OP_N,
+				                                 T.nRows, 1, T.nCubes,
+				                                 &alpha,
+				                                 (double*)cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nRows * cacheReshape.nCols,
+				                                 (double*)cacheOnes.pointer, cacheOnes.size, 0,
+				                                 &beta,
+				                                 (double*)A.pointer, A.nRows, A.nRows, T.nCols);
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+	}
+	EXPORT int _CubeWiseSumRaw(const ptr_t A, const ptr_t T, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cacheReshape, const ptr_t cacheOnes)
+	{
+		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
+		MemoryCube _T(T, nRows, nCols, nCubes, memorySpace, mathDomain);
+		MemoryCube _cacheReshape(cacheReshape, nRows, nCubes, nCols, memorySpace, mathDomain);
+		MemoryBuffer _cacheOnes(cacheOnes, nCubes, memorySpace, mathDomain);
+		return _CubeWiseSum(_A, _T, _cacheReshape, _cacheOnes);
+	}
+
 	/**
 	* X such that A * X = b by means of LU factorization
 	*/
@@ -725,6 +846,16 @@ EXTERN_C
 	}
 }
 
+GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, const int* RESTRICT y, const size_t sz, const int alpha, const int beta, const int gamma)
+{
+	CUDA_FUNCTION_PROLOGUE
+	CUDA_FOR_LOOP_PROLOGUE
+		
+		z[i] = alpha * x[i] + beta * y[i] + gamma * z[i];
+	
+	CUDA_FOR_LOOP_EPILOGUE
+}
+
 template <typename T>
 GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, const T* RESTRICT y, const size_t sz, const T alpha)
 {
@@ -747,12 +878,25 @@ GLOBAL void __IsNonZero__(T* RESTRICT z, const T* RESTRICT x, const size_t sz)
 	CUDA_FOR_LOOP_EPILOGUE
 }
 
-GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, const int* RESTRICT y, const size_t sz, const int alpha, const int beta, const int gamma)
+template <typename T>
+GLOBAL void __Reshape__(T* RESTRICT out, const T* RESTRICT in, const size_t nRows, const size_t nCols, const size_t nCubes)
 {
-	CUDA_FUNCTION_PROLOGUE
-	CUDA_FOR_LOOP_PROLOGUE
+	const int tidX = blockDim.x * blockIdx.x + threadIdx.x;
+	const unsigned int stepX = gridDim.x * blockDim.x;
 
-		z[i] = alpha * x[i] + beta * y[i] + gamma * z[i];
+	const int tidY = blockDim.y * blockIdx.y + threadIdx.y;
+	const unsigned int stepY = gridDim.y * blockDim.y;
 
-	CUDA_FOR_LOOP_EPILOGUE
+	const size_t inMatrixSize = nRows * nCols;
+	const size_t outMatrixSize = nRows * nCubes;
+	for (size_t i = tidX; i < nRows; i += stepX)
+	{
+		for (size_t j = tidY; j < nCols; j += stepY)
+		{
+			const size_t inStride = i + j * nRows;
+			const size_t outOffset = i + j * outMatrixSize;
+			for (size_t k = 0; k < nCubes; ++k)
+				out[outOffset + k * nRows] = in[inStride + k * inMatrixSize];
+		}
+	}
 }

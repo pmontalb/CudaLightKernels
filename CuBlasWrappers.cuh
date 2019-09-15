@@ -57,8 +57,14 @@ EXTERN_C
 	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 
 	/*
-	*	A[i] = alpha * B[i] * C[i] + beta * A[i]
+	*	A = alpha * B * C + beta * A
 	*/
+	EXPORT int _SubMultiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nRowsB, const unsigned nColsB, const unsigned nColsC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
+	EXPORT int _SubMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nColsB, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
+	
+	/*
+*	A[i] = alpha * B[i] * C[i] + beta * A[i]
+*/
 	EXPORT int _BatchedMultiply(MemoryCube A, const MemoryCube B, const MemoryCube C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 	EXPORT int _BatchedMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 	

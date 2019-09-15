@@ -234,44 +234,56 @@ EXTERN_C
 		return _ElementwiseProduct(_z, _x, _y, alpha);
 	}
 
-	EXPORT int _Multiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	EXPORT int _SubMultiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nRowsB, const unsigned nColsB, const unsigned nColsC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
 		{
-		case MathDomain::Float:
-		{
-			const float _alpha = (float)alpha;
-			const float _beta = (float)beta;
-			return cublasSgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
-				leadingDimensionB, C.nCols, leadingDimensionC,
-				&_alpha,
-				(float*)B.pointer, leadingDimensionB,
-				(float*)C.pointer, leadingDimensionC,
-				&_beta,
-				(float*)A.pointer, leadingDimensionB);
+			case MathDomain::Float:
+			{
+				const float _alpha = (float)alpha;
+				const float _beta = (float)beta;
+				return cublasSgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
+				                   nRowsB, nColsC, nColsB,
+				                   &_alpha,
+				                   (float*)B.pointer, leadingDimensionB,
+				                   (float*)C.pointer, leadingDimensionC,
+				                   &_beta,
+				                   (float*)A.pointer, leadingDimensionA);
+			}
+			case MathDomain::Double:
+			{
+				return cublasDgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
+				                   nRowsB, nColsC, nColsB,
+				                   &alpha,
+				                   (double*)B.pointer, leadingDimensionB,
+				                   (double*)C.pointer, leadingDimensionC,
+				                   &beta,
+				                   (double*)A.pointer, leadingDimensionA);
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
 		}
-		case MathDomain::Double:
-		{
-			return cublasDgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
-				leadingDimensionB, C.nCols, leadingDimensionC,
-					&alpha,
-					(double*)B.pointer, leadingDimensionB,
-					(double*)C.pointer, leadingDimensionC,
-					&beta,
-					(double*)A.pointer, leadingDimensionB);
-		}
-		default:
-			return CudaKernelException::_NotImplementedException;
-		}
+	}
+	EXPORT int _SubMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nColsB, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	{
+		MemoryTile _A(A, leadingDimensionA, nColsC, memorySpace, mathDomain);
+		MemoryTile _B(B, leadingDimensionB, nRowsC, memorySpace, mathDomain);
+		MemoryTile _C(C, leadingDimensionC, nColsC, memorySpace, mathDomain);
+		return _SubMultiply(_A, _B, _C, leadingDimensionA, leadingDimensionB, leadingDimensionC, nRowsB, nColsB, nColsC, bOperation, cOperation, alpha, beta);
+	}
+
+	EXPORT int _Multiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	{
+		return _SubMultiply(A, B, C, leadingDimensionB, leadingDimensionB, leadingDimensionC, B.nRows, B.nCols, C.nCols, bOperation, cOperation, alpha, beta);
 	}
 	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
-	{
-		MemoryTile _A(A, nRowsB, nColsC, memorySpace, mathDomain);
-		MemoryTile _B(B, nRowsB, nRowsC, memorySpace, mathDomain);
-		MemoryTile _C(C, nRowsC, nColsC, memorySpace, mathDomain);
-		return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha, beta);
-	}
+{
+	MemoryTile _A(A, nRowsB, nColsC, memorySpace, mathDomain);
+	MemoryTile _B(B, nRowsB, nRowsC, memorySpace, mathDomain);
+	MemoryTile _C(C, nRowsC, nColsC, memorySpace, mathDomain);
+	return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha, beta);
+}
 
 	EXPORT int _BatchedMultiply(MemoryCube A, const MemoryCube B, const MemoryCube C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{

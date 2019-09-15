@@ -83,13 +83,12 @@ EXTERN_C
     {
         return _Add(z, y, x, -1.0);
     }
-
+    
     EXPORT int _SubtractEqual(MemoryBuffer z, const MemoryBuffer x)
     {
         return _AddEqual(z, x, -1.0);
     }
-
-
+    
 	/**
 	* A += alpha * B
 	*/
@@ -274,6 +273,48 @@ EXTERN_C
 		return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha, beta);
 	}
 
+	EXPORT int _BatchedMultiply(MemoryCube A, const MemoryCube B, const MemoryCube C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				float _alpha = (float)alpha;
+				float _beta = (float)beta;
+				
+				return cublasSgemmStridedBatched(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
+				                                 A.nRows, A.nCols, B.nCols,
+				                                 &_alpha,
+				                                 (float*)B.pointer, leadingDimensionB, strideB,
+				                                 (float*)C.pointer, leadingDimensionC, strideC,
+				                                 &_beta,
+				                                 (float*)A.pointer, A.nRows, A.nRows * A.nCols,
+				                                 A.nCubes);
+			}
+			case MathDomain::Double:
+			{
+				return cublasDgemmStridedBatched(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
+				                                 A.nRows, A.nCols, B.nCols,
+				                                 &alpha,
+				                                 (double*)B.pointer, leadingDimensionB, strideB,
+				                                 (double*)C.pointer, leadingDimensionC, strideC,
+				                                 &beta,
+				                                 (double*)A.pointer, A.nRows, A.nRows * A.nCols,
+				                                 A.nCubes);
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+	}
+	EXPORT int _BatchedMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	{
+		MemoryCube _A(A, nRowsB, nColsC, nCubes, memorySpace, mathDomain);
+		MemoryCube _B(B, nRowsB, nRowsC, nCubes, memorySpace, mathDomain);
+		MemoryCube _C(C, nRowsC, nColsC, nCubes, memorySpace, mathDomain);
+		return _BatchedMultiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, _B.nRows * _B.nCols, _C.nRows * _C.nCols, bOperation, cOperation, alpha, beta);
+	}
+	
 	EXPORT int _Dot(MemoryBuffer y, const MemoryTile A, const MemoryBuffer x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
@@ -337,6 +378,70 @@ EXTERN_C
 		MemoryBuffer _y(y, nCols, memorySpace, mathDomain);
 		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
 		return _KroneckerProduct(_A, _x, _y, alpha);
+	}
+
+	EXPORT int _BatchedTransposedKroneckerProduct(MemoryCube T, const MemoryTile x, const MemoryTile y, const double alpha)
+	{
+		static constexpr size_t nStreams = { 32 };
+		cudaStream_t streams[nStreams];
+		int err = 0;
+		for (size_t i = 0; i < nStreams; i++)
+		{
+			err = cudaStreamCreate(&streams[i]);
+			if (err)
+				return err;
+		}
+		
+		const cublasHandle_t& handle = detail::CublasHandle();
+		const size_t nCubesPerSteam = (T.nCubes + nStreams) / nStreams;
+		
+		size_t cubeStart = 0;
+		size_t cubeEnd = nCubesPerSteam;
+		
+		MemoryTile cache1(T.pointer, T.nRows, T.nCols, T.memorySpace, T.mathDomain);
+		
+		MemoryBuffer cache2(x.pointer, x.nRows, x.memorySpace, x.mathDomain);
+		MemoryBuffer cache3(y.pointer, y.nRows, y.memorySpace, y.mathDomain);
+		
+		const size_t tOffset = T.nRows * T.nCols * T.ElementarySize();
+		const size_t xOffset = x.nRows * x.ElementarySize();
+		const size_t yOffset = y.nRows * y.ElementarySize();
+		for (size_t i = 0; i < nStreams; i++)
+		{
+			cublasSetStream(handle, streams[i]);
+			for (size_t j = cubeStart; j < cubeEnd; ++j)
+			{
+				err = _KroneckerProduct(cache1, cache2, cache3, alpha);
+				if (err)
+					return err;
+				
+				cache1.pointer += tOffset;
+				cache2.pointer += xOffset;
+				cache3.pointer += yOffset;
+			}
+			
+			cubeStart = cubeEnd;
+			cubeEnd = min(cubeEnd + nCubesPerSteam, static_cast<size_t>(T.nCubes));
+			
+			if (cubeStart == T.nCubes)
+				break;
+		}
+		cudaDeviceSynchronize();
+		
+		// reset stream
+		err = cublasSetStream(handle, nullptr);
+		if (err)
+			return err;
+		
+		return cudaGetLastError();
+	}
+	
+	EXPORT int _BatchedTransposedKroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryTile _x(x, nRows, nCubes, memorySpace, mathDomain);
+		MemoryTile _y(y, nCols, nCubes, memorySpace, mathDomain);
+		MemoryCube _A(A, nRows, nCols, nCubes, memorySpace, mathDomain);
+		return _BatchedTransposedKroneckerProduct(_A, _x, _y, alpha);
 	}
 
 	EXPORT int _CumulativeRowSum(MemoryTile A)
@@ -481,53 +586,30 @@ EXTERN_C
 			_Alloc(cacheOnes);
 		}
 		
-		int err = cudaGetLastError();
-		if (err)
-			return err;
-		
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
 		{
 			case MathDomain::Float:
-			{
 				CUDA_CALL_SINGLE(__Reshape__<float>, (float*)cacheReshape.pointer, (float*)T.pointer, T.nRows, T.nCols, T.nCubes);
-				err = cudaGetLastError();
-				if (err)
-					return err;
-				
-				float alpha = 1.0;
-				float beta = 0.0;
-				
-				return cublasSgemmStridedBatched(handle,
-						                         cublasOperation_t::CUBLAS_OP_N, cublasOperation_t::CUBLAS_OP_N,
-						                         T.nRows, 1, T.nCubes,
-						                         &alpha,
-						                         (float*)cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nRows * cacheReshape.nCols,
-						                         (float*)cacheOnes.pointer, cacheOnes.size, 0,
-						                         &beta,
-						                         (float*)A.pointer, A.nRows, A.nRows, T.nCols);
-			}
+				break;
 			case MathDomain::Double:
-			{
 				CUDA_CALL_DOUBLE(__Reshape__<double>, (double*)cacheReshape.pointer, (double*)T.pointer, T.nRows, T.nCols, T.nCubes);
-				err = cudaGetLastError();
-				if (err)
-					return err;
-				
-				double alpha = 1.0;
-				double beta = 0.0;
-				return cublasDgemmStridedBatched(handle,
-				                                 cublasOperation_t::CUBLAS_OP_N, cublasOperation_t::CUBLAS_OP_N,
-				                                 T.nRows, 1, T.nCubes,
-				                                 &alpha,
-				                                 (double*)cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nRows * cacheReshape.nCols,
-				                                 (double*)cacheOnes.pointer, cacheOnes.size, 0,
-				                                 &beta,
-				                                 (double*)A.pointer, A.nRows, A.nRows, T.nCols);
-			}
+				break;
 			default:
 				return CudaKernelException::_NotImplementedException;
 		}
+		
+		int err = cudaGetLastError();
+		if (err)
+			return err;
+		
+		return _BatchedMultiply(MemoryCube(A.pointer, A.nRows, 1, T.nCubes, A.memorySpace, A.mathDomain),
+				                MemoryCube(cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nCols, 0, A.memorySpace, A.mathDomain),
+				                MemoryCube(cacheOnes.pointer, cacheOnes.size, 0, 0, A.memorySpace, A.mathDomain),
+				                cacheReshape.nRows, cacheOnes.size,
+				                cacheReshape.nRows * cacheReshape.nCols,
+				                0,
+				                MatrixOperation::None, MatrixOperation::None, 1.0, 0.0);
 	}
 	EXPORT int _CubeWiseSumRaw(const ptr_t A, const ptr_t T, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cacheReshape, const ptr_t cacheOnes)
 	{

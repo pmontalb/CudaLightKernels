@@ -56,6 +56,12 @@ EXTERN_C
 	EXPORT int _Multiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 
+	/*
+	*	A[i] = alpha * B[i] * C[i] + beta * A[i]
+	*/
+	EXPORT int _BatchedMultiply(MemoryCube A, const MemoryCube B, const MemoryCube C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
+	EXPORT int _BatchedMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const MatrixOperation cOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
+	
 	/**
 	*	y = alpha * A * x + beta * y
 	*/
@@ -67,10 +73,18 @@ EXTERN_C
 	*/
 	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha = 1.0);
 	EXPORT int _KroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
-	
+
 	/**
-	* A = cumsum(A)
+	*	T[i] += alpha * A[i] * B[i]^T,
+	 *	NB: Instead of writing in A's depth, we're writing in A columns, so that effectively A is a collection of matrices.
+	 *	    This helps when using NN gradient descent
 	*/
+	EXPORT int _BatchedTransposedKroneckerProduct(MemoryCube T, const MemoryTile x, const MemoryTile y, const double alpha = 1.0);
+	EXPORT int _BatchedTransposedKroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
+
+/**
+* A = cumsum(A)
+*/
 	EXPORT int _CumulativeRowSum(MemoryTile A);
 	EXPORT int _CumulativeRowSumRaw(const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain);
 

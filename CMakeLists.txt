@@ -55,6 +55,9 @@ target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -m64
 # no aliasing
 target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: -restrict>)
 
+# allow stream concurrency
+target_compile_options(CudaLightKernels PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: --default-stream per-thread>)
+
 OPTION(USE_FAST_MATH "Use --use_fast_math" OFF)
 if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
     # optimization flags

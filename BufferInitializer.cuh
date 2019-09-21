@@ -6,37 +6,40 @@
 
 EXTERN_C
 {
-	EXPORT int _Zero(MemoryBuffer buf);
+	EXPORT int _Zero(MemoryBuffer& buf);
 	EXPORT int _ZeroRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain);
 	
-	EXPORT int _Initialize(MemoryBuffer buf, const double value);
+	EXPORT int _Initialize(MemoryBuffer& buf, const double value);
     EXPORT int _InitializeRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double value);
 
-	EXPORT int _LinSpace(MemoryBuffer buf, const double x0, const double x1);
+	EXPORT int _Reciprocal(MemoryBuffer& buf);
+	EXPORT int _ReciprocalRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain);
+	
+	EXPORT int _LinSpace(MemoryBuffer& buf, const double x0, const double x1);
 	EXPORT int _LinSpaceRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double x0, const double x1);
 
-	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed);
+	EXPORT int _RandUniform(MemoryBuffer& buf, const unsigned seed);
 	EXPORT int _RandUniformRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 
-	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed);
+	EXPORT int _RandNormal(MemoryBuffer& buf, const unsigned seed);
 	EXPORT int _RandNormalRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 
-	EXPORT int _Eye(MemoryTile buf);
+	EXPORT int _Eye(MemoryTile& buf);
 	EXPORT int _EyeRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain);
 
-	EXPORT int _OnesUpperTriangular(MemoryTile buf);
+	EXPORT int _OnesUpperTriangular(MemoryTile& buf);
 	EXPORT int _OnesUpperTriangularRaw(const ptr_t pointer, const unsigned nRows, const MemorySpace memorySpace, const MathDomain mathDomain);
 
-	EXPORT int _RandShuffle(MemoryBuffer buf, const unsigned seed);
+	EXPORT int _RandShuffle(MemoryBuffer& buf, const unsigned seed);
 	EXPORT int _RandShuffleRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 
-	EXPORT int _RandShufflePair(MemoryBuffer buf1, MemoryBuffer bu2, const unsigned seed);
+	EXPORT int _RandShufflePair(MemoryBuffer& buf1, MemoryBuffer& bu2, const unsigned seed);
 	EXPORT int _RandShufflePairRaw(const ptr_t p1, const ptr_t p2, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 	
-	EXPORT int _RandShuffleColumns(MemoryTile buf, const unsigned seed);
+	EXPORT int _RandShuffleColumns(MemoryTile& buf, const unsigned seed);
 	EXPORT int _RandShuffleColumnsRaw(const ptr_t pointer, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 	
-	EXPORT int _RandShuffleColumnsPair(MemoryTile buf1, MemoryTile bu2, const unsigned seed);
+	EXPORT int _RandShuffleColumnsPair(MemoryTile& buf1, MemoryTile& bu2, const unsigned seed);
 	EXPORT int _RandShuffleColumnsPairRaw(const ptr_t p1, const ptr_t p2, const unsigned nRows1, const unsigned nRows2, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned seed);
 }
 
@@ -45,6 +48,9 @@ EXTERN_C
 
 template <typename T>
 GLOBAL void __Initialize__(T* RESTRICT ptr, const ptr_t sz, const T value);
+
+template <typename T>
+GLOBAL void __Reciprocal__(T* RESTRICT ptr, const ptr_t sz);
 
 template <typename T>
 GLOBAL void __LinSpace__(T* RESTRICT ptr, const ptr_t sz, const T x0, const T dx);

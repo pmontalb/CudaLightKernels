@@ -30,7 +30,7 @@ struct AbsMax
 
 EXTERN_C
 {
-	EXPORT int _Sum(double& sum, const MemoryBuffer v)
+	EXPORT int _Sum(double& sum, const MemoryBuffer& v)
 	{
 		void* cache = nullptr;
 
@@ -97,7 +97,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _Min(double& min, const MemoryBuffer v)
+	EXPORT int _Min(double& min, const MemoryBuffer& v)
 	{
 		void* cache = nullptr;
 
@@ -164,7 +164,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _Max(double& max, const MemoryBuffer v)
+	EXPORT int _Max(double& max, const MemoryBuffer& v)
 	{
 		void* cache = nullptr;
 
@@ -231,7 +231,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _AbsMin(double& min, const MemoryBuffer v)
+	EXPORT int _AbsMin(double& min, const MemoryBuffer& v)
 	{
 		void* cache = nullptr;
 
@@ -298,7 +298,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _AbsMax(double& max, const MemoryBuffer v)
+	EXPORT int _AbsMax(double& max, const MemoryBuffer& v)
 	{
 		void* cache = nullptr;
 

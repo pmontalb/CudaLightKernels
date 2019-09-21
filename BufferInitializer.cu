@@ -3,7 +3,7 @@
 
 EXTERN_C
 {
-	EXPORT int _Zero(MemoryBuffer buf)
+	EXPORT int _Zero(MemoryBuffer& buf)
 	{
 		cudaMemset((void*)(buf.pointer), 0, buf.TotalSize());
 		return cudaGetLastError();
@@ -14,7 +14,7 @@ EXTERN_C
 		return _Zero(buf);
 	}
 
-	EXPORT int _Initialize(MemoryBuffer buf, const double value)
+	EXPORT int _Initialize(MemoryBuffer& buf, const double value)
 	{
 		switch (buf.mathDomain)
 		{
@@ -39,7 +39,32 @@ EXTERN_C
 		return _Initialize(buf, value);
     }
 
-	EXPORT int _LinSpace(MemoryBuffer buf, const double x0, const double x1)
+	EXPORT int _Reciprocal(MemoryBuffer& buf)
+{
+	switch (buf.mathDomain)
+	{
+		case MathDomain::Float:
+			CUDA_CALL_SINGLE(__Reciprocal__<float>, (float*)buf.pointer, buf.size);
+			break;
+		case MathDomain::Double:
+			CUDA_CALL_DOUBLE(__Reciprocal__<double>, (double*)buf.pointer, buf.size);
+			break;
+		case MathDomain::Int:
+			CUDA_CALL_SINGLE(__Reciprocal__<int>, (int*)buf.pointer, buf.size);
+			break;
+		default:
+			return CudaKernelException::_NotImplementedException;
+	}
+	
+	return cudaGetLastError();
+}
+	EXPORT int _ReciprocalRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
+{
+	MemoryBuffer buf(pointer, size, memorySpace, mathDomain);
+	return _Reciprocal(buf);
+}
+
+	EXPORT int _LinSpace(MemoryBuffer& buf, const double x0, const double x1)
 	{
 		const double dx = (x1 - x0) / (buf.size - 1);
 
@@ -63,7 +88,7 @@ EXTERN_C
 		return _LinSpace(buf, x0, x1);
 	}
 
-	EXPORT int _RandUniform(MemoryBuffer buf, const unsigned seed)
+	EXPORT int _RandUniform(MemoryBuffer& buf, const unsigned seed)
 	{
 		dim3 block, grid;
 		const unsigned halfSz = (buf.size + 1) >> 1;
@@ -100,7 +125,7 @@ EXTERN_C
 		return _RandUniform(buf,seed);
 	}
 
-	EXPORT int _RandNormal(MemoryBuffer buf, const unsigned seed)
+	EXPORT int _RandNormal(MemoryBuffer& buf, const unsigned seed)
 	{
 		dim3 block, grid;
 		const unsigned halfSz = buf.size >> 1;
@@ -137,7 +162,7 @@ EXTERN_C
 		return _RandNormal(buf, seed);
 	}
 
-	EXPORT int _Eye(MemoryTile buf)
+	EXPORT int _Eye(MemoryTile& buf)
 	{
 		dim3 blockDim(16, 16);
 		dim3 gridDim((buf.nRows + 15) / 16, (buf.nRows + 15) / 16);
@@ -162,7 +187,7 @@ EXTERN_C
 		return _Eye(tile);
 	}
 
-	EXPORT int _OnesUpperTriangular(MemoryTile buf)
+	EXPORT int _OnesUpperTriangular(MemoryTile& buf)
 	{
 		dim3 blockDim(16, 16);
 		dim3 gridDim((buf.nRows + 15) / 16, (buf.nRows + 15) / 16);
@@ -187,7 +212,7 @@ EXTERN_C
 		return _OnesUpperTriangular(tile);
 	}
 
-	EXPORT int _RandShuffle(MemoryBuffer buf, const unsigned seed)
+	EXPORT int _RandShuffle(MemoryBuffer& buf, const unsigned seed)
 	{
 		dim3 block, grid;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, buf.size);
@@ -224,7 +249,7 @@ EXTERN_C
 		return _RandShuffle(buf, seed);
 	}
 
-	EXPORT int _RandShufflePair(MemoryBuffer buf1, MemoryBuffer buf2, const unsigned seed)
+	EXPORT int _RandShufflePair(MemoryBuffer& buf1, MemoryBuffer& buf2, const unsigned seed)
 	{
 		dim3 block, grid;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, buf1.size);
@@ -262,7 +287,7 @@ EXTERN_C
 		return _RandShufflePair(buf1, buf2, seed);
 	}
 
-	EXPORT int _RandShuffleColumns(MemoryTile buf, const unsigned seed)
+	EXPORT int _RandShuffleColumns(MemoryTile& buf, const unsigned seed)
 	{
 		dim3 block, grid;
 		detail::GetBestDimension(block, grid, N_BLOCKS_SINGLE, buf.nCols);
@@ -299,7 +324,7 @@ EXTERN_C
 		return _RandShuffleColumns(buf, seed);
 	}
 
-	EXPORT int _RandShuffleColumnsPair(MemoryTile buf1, MemoryTile buf2, const unsigned seed)
+	EXPORT int _RandShuffleColumnsPair(MemoryTile& buf1, MemoryTile& buf2, const unsigned seed)
 	{
 		assert(buf1.nCols == buf2.nCols);
 		dim3 block, grid;
@@ -347,6 +372,17 @@ GLOBAL void __Initialize__(T* RESTRICT ptr, const ptr_t sz, const T value)
 
 		ptr[i] = value;
 
+	CUDA_FOR_LOOP_EPILOGUE
+}
+
+template <typename T>
+GLOBAL void __Reciprocal__(T* RESTRICT ptr, const ptr_t sz)
+{
+	CUDA_FUNCTION_PROLOGUE
+	CUDA_FOR_LOOP_PROLOGUE
+		
+		ptr[i] = static_cast<T>(1.0) / ptr[i];
+	
 	CUDA_FOR_LOOP_EPILOGUE
 }
 

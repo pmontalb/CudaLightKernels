@@ -9,7 +9,7 @@ EXTERN_C
 	/**
 	* z = x + y
 	*/
-	EXPORT int _Add(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
+	EXPORT int _Add(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 
@@ -52,7 +52,7 @@ EXTERN_C
 	/**
 	* z += x
 	*/
-	EXPORT int _AddEqual(MemoryBuffer z, const MemoryBuffer x, const double alpha)
+	EXPORT int _AddEqual(MemoryBuffer& z, const MemoryBuffer& x, const double alpha)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 
@@ -79,12 +79,12 @@ EXTERN_C
 		return _AddEqual(_z, _x, alpha);
     }
 
-    EXPORT int _Subtract(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y)
+    EXPORT int _Subtract(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y)
     {
         return _Add(z, y, x, -1.0);
     }
     
-    EXPORT int _SubtractEqual(MemoryBuffer z, const MemoryBuffer x)
+    EXPORT int _SubtractEqual(MemoryBuffer& z, const MemoryBuffer& x)
     {
         return _AddEqual(z, x, -1.0);
     }
@@ -92,7 +92,7 @@ EXTERN_C
 	/**
 	* A += alpha * B
 	*/
-	EXPORT int _AddEqualMatrix(MemoryTile A, const MemoryTile B, const MatrixOperation aOperation, const MatrixOperation bOperation, const double alpha, const double beta)
+	EXPORT int _AddEqualMatrix(MemoryTile& A, const MemoryTile& B, const MatrixOperation aOperation, const MatrixOperation bOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 
@@ -105,20 +105,20 @@ EXTERN_C
 			return cublasSgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
-				(float*)A.pointer, A.nRows,
+				(float*)A.pointer, A.leadingDimension,
 				&_beta,
-				(float*)B.pointer, A.nRows,
-				(float*)A.pointer, A.nRows);
+				(float*)B.pointer, B.leadingDimension,
+				(float*)A.pointer, A.leadingDimension);
 		}
 		case MathDomain::Double:
 		{
 			return cublasDgeam(handle, cublasOperation[static_cast<unsigned>(aOperation)], cublasOperation[static_cast<unsigned>(bOperation)],
 				A.nRows, A.nCols,
 				&alpha,
-				(double*)A.pointer, A.nRows,
+				(double*)A.pointer, A.leadingDimension,
 				&beta,
-				(double*)B.pointer, A.nRows,
-				(double*)A.pointer, A.nRows);
+				(double*)B.pointer, B.leadingDimension,
+				(double*)A.pointer, A.leadingDimension);
 		}
 		default:
 			return CudaKernelException::_NotImplementedException;
@@ -130,11 +130,11 @@ EXTERN_C
 		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
 		return _AddEqualMatrix(_A, _B, aOperation, bOperation, alpha, beta);
 	}
-
+	
 	/**
 	* z *= alpha
 	*/
-	EXPORT int _Scale(MemoryBuffer z, const double alpha)
+	EXPORT int _Scale(MemoryBuffer& z, const double alpha)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (z.mathDomain)
@@ -159,7 +159,39 @@ EXTERN_C
 		return _Scale(_z, alpha);
 	}
 
-	EXPORT int _ElementwiseProduct(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
+	EXPORT int _ScaleColumns(MemoryTile& z, const MemoryBuffer& alpha)
+	{
+		const cublasHandle_t& handle = detail::CublasHandle();
+		
+		cublasPointerMode_t originalPointerMode;
+		cublasGetPointerMode(handle, &originalPointerMode);
+		cublasSetPointerMode(handle, cublasPointerMode_t::CUBLAS_POINTER_MODE_DEVICE);
+		switch (z.mathDomain)
+		{
+			case MathDomain::Float:
+				for (size_t i = 0; i < z.nCols; ++i)
+					cublasSscal(handle, z.nRows, (float*)(alpha.pointer + i * alpha.ElementarySize()), (float*)(z.pointer + i * z.nRows * z.ElementarySize()), 1);
+				break;
+			case MathDomain::Double:
+				for (size_t i = 0; i < z.nCols; ++i)
+					cublasDscal(handle, z.nRows, (double*)(alpha.pointer + i * alpha.ElementarySize()), (double*)(z.pointer + i * z.nRows * z.ElementarySize()), 1);
+				break;
+			default:
+				cublasSetPointerMode(handle, originalPointerMode);
+				return CudaKernelException::_NotImplementedException;
+		}
+		cublasSetPointerMode(handle, originalPointerMode);
+		
+		return cudaGetLastError();
+	}
+	EXPORT int _ScaleColumnsRaw(const ptr_t z, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t alpha)
+	{
+		MemoryTile _z(z, nRows, nCols, memorySpace, mathDomain);
+		MemoryBuffer _alpha(alpha, nCols, memorySpace, mathDomain);
+		return _ScaleColumns(_z, _alpha);
+	}
+	
+	EXPORT int _ElementwiseProduct(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
 	{
 #ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
 
@@ -210,13 +242,13 @@ EXTERN_C
 		switch (z.mathDomain)
 		{
 			case MathDomain::Float:
-				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float COMMA false>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
 				break;
 			case MathDomain::Double:
-				CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
+				CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double COMMA false>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
 				break;
 			case MathDomain::Int:
-				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int COMMA false>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
 				break;
 			default:
 				return CudaKernelException::_NotImplementedException;
@@ -234,7 +266,40 @@ EXTERN_C
 		return _ElementwiseProduct(_z, _x, _y, alpha);
 	}
 
-	EXPORT int _SubMultiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nRowsB, const unsigned nColsB, const unsigned nColsC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	EXPORT int _ElementwiseDivision(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
+	{
+		#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
+			return CudaKernelException::_NotImplementedException;
+		#else
+		
+		switch (z.mathDomain)
+		{
+			case MathDomain::Float:
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float COMMA true>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
+				break;
+			case MathDomain::Double:
+				CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double COMMA true>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
+				break;
+			case MathDomain::Int:
+				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int COMMA true>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
+				break;
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+		
+		#endif // USE_NAIVE_ELEMENTWISE_PRODUCT
+		
+		return cudaGetLastError();
+	}
+	EXPORT int _ElementwiseDivisionRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
+	{
+		MemoryBuffer _z(z, size, memorySpace, mathDomain);
+		MemoryBuffer _x(x, size, memorySpace, mathDomain);
+		MemoryBuffer _y(y, size, memorySpace, mathDomain);
+		return _ElementwiseDivision(_z, _x, _y, alpha);
+	}
+
+	EXPORT int _SubMultiply(MemoryTile& A, const MemoryTile& B, const MemoryTile& C, const unsigned nRowsB, const unsigned nColsB, const unsigned nColsC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
@@ -246,20 +311,20 @@ EXTERN_C
 				return cublasSgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				                   nRowsB, nColsC, nColsB,
 				                   &_alpha,
-				                   (float*)B.pointer, leadingDimensionB,
-				                   (float*)C.pointer, leadingDimensionC,
+				                   (float*)B.pointer, B.leadingDimension,
+				                   (float*)C.pointer, C.leadingDimension,
 				                   &_beta,
-				                   (float*)A.pointer, leadingDimensionA);
+				                   (float*)A.pointer, A.leadingDimension);
 			}
 			case MathDomain::Double:
 			{
 				return cublasDgemm(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				                   nRowsB, nColsC, nColsB,
 				                   &alpha,
-				                   (double*)B.pointer, leadingDimensionB,
-				                   (double*)C.pointer, leadingDimensionC,
+				                   (double*)B.pointer, B.leadingDimension,
+				                   (double*)C.pointer, C.leadingDimension,
 				                   &beta,
-				                   (double*)A.pointer, leadingDimensionA);
+				                   (double*)A.pointer, A.leadingDimension);
 			}
 			default:
 				return CudaKernelException::_NotImplementedException;
@@ -267,25 +332,25 @@ EXTERN_C
 	}
 	EXPORT int _SubMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionA, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned nColsB, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{
-		MemoryTile _A(A, leadingDimensionA, nColsC, memorySpace, mathDomain);
-		MemoryTile _B(B, leadingDimensionB, nRowsC, memorySpace, mathDomain);
-		MemoryTile _C(C, leadingDimensionC, nColsC, memorySpace, mathDomain);
-		return _SubMultiply(_A, _B, _C, leadingDimensionA, leadingDimensionB, leadingDimensionC, nRowsB, nColsB, nColsC, bOperation, cOperation, alpha, beta);
+		MemoryTile _A(A, leadingDimensionA, nColsC, leadingDimensionA, memorySpace, mathDomain);
+		MemoryTile _B(B, leadingDimensionB, nRowsC, leadingDimensionB, memorySpace, mathDomain);
+		MemoryTile _C(C, leadingDimensionC, nColsC, leadingDimensionC, memorySpace, mathDomain);
+		return _SubMultiply(_A, _B, _C, nRowsB, nColsB, nColsC, bOperation, cOperation, alpha, beta);
 	}
 
-	EXPORT int _Multiply(MemoryTile A, const MemoryTile B, const MemoryTile C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	EXPORT int _Multiply(MemoryTile& A, const MemoryTile& B, const MemoryTile& C, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{
-		return _SubMultiply(A, B, C, leadingDimensionB, leadingDimensionB, leadingDimensionC, B.nRows, B.nCols, C.nCols, bOperation, cOperation, alpha, beta);
+		return _SubMultiply(A, B, C, B.nRows, B.nCols, C.nCols, bOperation, cOperation, alpha, beta);
 	}
 	EXPORT int _MultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 {
-	MemoryTile _A(A, nRowsB, nColsC, memorySpace, mathDomain);
-	MemoryTile _B(B, nRowsB, nRowsC, memorySpace, mathDomain);
-	MemoryTile _C(C, nRowsC, nColsC, memorySpace, mathDomain);
-	return _Multiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, bOperation, cOperation, alpha, beta);
+	MemoryTile _A(A, nRowsB, nColsC, leadingDimensionB, memorySpace, mathDomain);
+	MemoryTile _B(B, nRowsB, nRowsC, leadingDimensionB, memorySpace, mathDomain);
+	MemoryTile _C(C, nRowsC, nColsC, leadingDimensionC, memorySpace, mathDomain);
+	return _Multiply(_A, _B, _C, bOperation, cOperation, alpha, beta);
 }
 
-	EXPORT int _BatchedMultiply(MemoryCube A, const MemoryCube B, const MemoryCube C, const unsigned leadingDimensionB, const unsigned leadingDimensionC, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
+	EXPORT int _BatchedMultiply(MemoryCube& A, const MemoryCube& B, const MemoryCube& C, const unsigned strideB, const unsigned strideC, const MatrixOperation bOperation, const MatrixOperation cOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
@@ -298,10 +363,10 @@ EXTERN_C
 				return cublasSgemmStridedBatched(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				                                 A.nRows, A.nCols, B.nCols,
 				                                 &_alpha,
-				                                 (float*)B.pointer, leadingDimensionB, strideB,
-				                                 (float*)C.pointer, leadingDimensionC, strideC,
+				                                 (float*)B.pointer, B.leadingDimension, strideB,
+				                                 (float*)C.pointer, C.leadingDimension, strideC,
 				                                 &_beta,
-				                                 (float*)A.pointer, A.nRows, A.nRows * A.nCols,
+				                                 (float*)A.pointer, A.leadingDimension, A.nRows * A.nCols,
 				                                 A.nCubes);
 			}
 			case MathDomain::Double:
@@ -309,10 +374,10 @@ EXTERN_C
 				return cublasDgemmStridedBatched(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				                                 A.nRows, A.nCols, B.nCols,
 				                                 &alpha,
-				                                 (double*)B.pointer, leadingDimensionB, strideB,
-				                                 (double*)C.pointer, leadingDimensionC, strideC,
+				                                 (double*)B.pointer, B.leadingDimension, strideB,
+				                                 (double*)C.pointer, C.leadingDimension, strideC,
 				                                 &beta,
-				                                 (double*)A.pointer, A.nRows, A.nRows * A.nCols,
+				                                 (double*)A.pointer, A.leadingDimension, A.nRows * A.nCols,
 				                                 A.nCubes);
 			}
 			default:
@@ -324,10 +389,10 @@ EXTERN_C
 		MemoryCube _A(A, nRowsB, nColsC, nCubes, memorySpace, mathDomain);
 		MemoryCube _B(B, nRowsB, nRowsC, nCubes, memorySpace, mathDomain);
 		MemoryCube _C(C, nRowsC, nColsC, nCubes, memorySpace, mathDomain);
-		return _BatchedMultiply(_A, _B, _C, leadingDimensionB, leadingDimensionC, _B.nRows * _B.nCols, _C.nRows * _C.nCols, bOperation, cOperation, alpha, beta);
+		return _BatchedMultiply(_A, _B, _C, _B.nRows * _B.nCols, _C.nRows * _C.nCols, bOperation, cOperation, alpha, beta);
 	}
 	
-	EXPORT int _Dot(MemoryBuffer y, const MemoryTile A, const MemoryBuffer x, const MatrixOperation aOperation, const double alpha, const double beta)
+	EXPORT int _Dot(MemoryBuffer& y, const MemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
@@ -339,7 +404,7 @@ EXTERN_C
 			return cublasSgemv(handle, cublasOperation[static_cast<unsigned>(aOperation)],
 				A.nRows, A.nCols,
 				&_alpha,
-				(float*)A.pointer, A.nRows,
+				(float*)A.pointer, A.leadingDimension,
 				(float*)x.pointer, 1,
 				&_beta,
 				(float*)y.pointer, 1);
@@ -349,7 +414,7 @@ EXTERN_C
 			return cublasDgemv(handle, cublasOperation[static_cast<unsigned>(aOperation)],
 				A.nRows, A.nCols,
 				&alpha,
-				(double*)A.pointer, A.nRows,
+				(double*)A.pointer, A.leadingDimension,
 				(double*)x.pointer, 1,
 				&beta,
 				(double*)y.pointer, 1);
@@ -366,7 +431,7 @@ EXTERN_C
 		return _Dot(_y, _A, _x, aOperation, alpha, beta);
 	}
 
-	EXPORT int _KroneckerProduct(MemoryTile A, const MemoryBuffer x, const MemoryBuffer y, const double alpha)
+	EXPORT int _KroneckerProduct(MemoryTile& A, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
@@ -392,7 +457,7 @@ EXTERN_C
 		return _KroneckerProduct(_A, _x, _y, alpha);
 	}
 
-	EXPORT int _BatchedTransposedKroneckerProduct(MemoryCube T, const MemoryTile x, const MemoryTile y, const double alpha)
+	EXPORT int _BatchedTransposedKroneckerProduct(MemoryCube& T, const MemoryTile& x, const MemoryTile& y, const double alpha)
 	{
 		static constexpr size_t nStreams = { 32 };
 		cudaStream_t streams[nStreams];
@@ -411,7 +476,6 @@ EXTERN_C
 		size_t cubeEnd = nCubesPerSteam;
 		
 		MemoryTile cache1(T.pointer, T.nRows, T.nCols, T.memorySpace, T.mathDomain);
-		
 		MemoryBuffer cache2(x.pointer, x.nRows, x.memorySpace, x.mathDomain);
 		MemoryBuffer cache3(y.pointer, y.nRows, y.memorySpace, y.mathDomain);
 		
@@ -447,7 +511,6 @@ EXTERN_C
 		
 		return cudaGetLastError();
 	}
-	
 	EXPORT int _BatchedTransposedKroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
 	{
 		MemoryTile _x(x, nRows, nCubes, memorySpace, mathDomain);
@@ -456,7 +519,7 @@ EXTERN_C
 		return _BatchedTransposedKroneckerProduct(_A, _x, _y, alpha);
 	}
 
-	EXPORT int _CumulativeRowSum(MemoryTile A)
+	EXPORT int _CumulativeRowSum(MemoryTile& A)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		int err = -1;
@@ -485,10 +548,10 @@ EXTERN_C
 			err = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
 				A.nRows, A.nCols, A.nRows,
 				&alpha,
-				buffer, A.nRows,
-				(float*)ones.pointer, A.nRows,
+				buffer, A.leadingDimension,
+				(float*)ones.pointer, A.leadingDimension,
 				&beta,
-				(float*)A.pointer, A.nRows);
+				(float*)A.pointer, A.leadingDimension);
 
 			cudaFree((void*)ones.pointer);
 			cudaFree(buffer);
@@ -515,10 +578,10 @@ EXTERN_C
 			err = cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
 				A.nRows, A.nCols, A.nRows,
 				&alpha,
-				buffer, A.nRows,
-				(double*)ones.pointer, A.nRows,
+				buffer, A.leadingDimension,
+				(double*)ones.pointer, A.leadingDimension,
 				&beta,
-				(double*)A.pointer, A.nRows);
+				(double*)A.pointer, A.leadingDimension);
 
 			cudaFree((void*)ones.pointer);
 			cudaFree(buffer);
@@ -539,7 +602,7 @@ EXTERN_C
 	/**
 	* x = sum(A[:, ])
 	*/
-	EXPORT int _RowWiseSum(MemoryBuffer x, const MemoryTile A, MemoryBuffer cache)
+	EXPORT int _RowWiseSum(MemoryBuffer& x, const MemoryTile& A, MemoryBuffer& cache, const MatrixOperation aOperation)
 	{
 		if (cache.size != A.nCols)
 		{
@@ -555,20 +618,20 @@ EXTERN_C
 			_Initialize(cache, 1.0);
 		}
 		
-		return _Dot(x, A, cache);
+		return _Dot(x, A, cache, aOperation);
 	}
-	EXPORT int _RowWiseSumRaw(const ptr_t x, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cache)
+	EXPORT int _RowWiseSumRaw(const ptr_t x, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cache, const MatrixOperation aOperation)
 	{
 		MemoryBuffer _x(x, nRows, memorySpace, mathDomain);
 		MemoryTile _A(A, nRows, nCols, memorySpace, mathDomain);
 		MemoryBuffer _cache(cache, nCols, memorySpace, mathDomain);
-		return _RowWiseSum(_x, _A, _cache);
+		return _RowWiseSum(_x, _A, _cache, aOperation);
 	}
 
 	/**
 	* x = sum(A[:, :, ])
 	*/
-	EXPORT int _CubeWiseSum(MemoryTile A, const MemoryCube T, MemoryCube cacheReshape, MemoryBuffer cacheOnes)
+	EXPORT int _CubeWiseSum(MemoryTile& A, const MemoryCube& T, MemoryCube& cacheReshape, MemoryBuffer& cacheOnes)
 	{
 		if (cacheOnes.size != T.nCubes)
 		{
@@ -579,7 +642,7 @@ EXTERN_C
 		
 		if (cacheOnes.pointer == 0)
 		{
-			cacheOnes = MemoryBuffer(cacheOnes.pointer, T.nCubes, T.memorySpace, T.mathDomain);
+			cacheOnes = MemoryBuffer(0, T.nCubes, T.memorySpace, T.mathDomain);
 			_Alloc(cacheOnes);
 			_Initialize(cacheOnes, 1.0);
 		}
@@ -594,16 +657,20 @@ EXTERN_C
 		
 		if (cacheReshape.pointer == 0)
 		{
-			cacheReshape = MemoryCube(cacheOnes.pointer, T.nRows, T.nCubes, T.nCols, T.memorySpace, T.mathDomain);
-			_Alloc(cacheOnes);
+			cacheReshape = MemoryCube(0, T.nRows, T.nCubes, T.nCols, T.memorySpace, T.mathDomain);
+			_Alloc(cacheReshape);
 		}
 		
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
 		{
 			case MathDomain::Float:
-				CUDA_CALL_SINGLE(__Reshape__<float>, (float*)cacheReshape.pointer, (float*)T.pointer, T.nRows, T.nCols, T.nCubes);
+			{
+				dim3 blockDim(32, 32);
+				dim3 gridDim((cacheReshape.nRows + 32 - 1) / 32, (cacheReshape.nCols + 32 - 1) / 32);
+				CUDA_CALL_XY(__Reshape__<float>, gridDim, blockDim, (float*)cacheReshape.pointer, (float*)T.pointer, T.nRows, T.nCols, T.nCubes);
 				break;
+			}
 			case MathDomain::Double:
 				CUDA_CALL_DOUBLE(__Reshape__<double>, (double*)cacheReshape.pointer, (double*)T.pointer, T.nRows, T.nCols, T.nCubes);
 				break;
@@ -615,13 +682,10 @@ EXTERN_C
 		if (err)
 			return err;
 		
-		return _BatchedMultiply(MemoryCube(A.pointer, A.nRows, 1, T.nCubes, A.memorySpace, A.mathDomain),
-				                MemoryCube(cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nCols, 0, A.memorySpace, A.mathDomain),
-				                MemoryCube(cacheOnes.pointer, cacheOnes.size, 0, 0, A.memorySpace, A.mathDomain),
-				                cacheReshape.nRows, cacheOnes.size,
-				                cacheReshape.nRows * cacheReshape.nCols,
-				                0,
-				                MatrixOperation::None, MatrixOperation::None, 1.0, 0.0);
+		MemoryCube tmp1(A.pointer, A.nRows, 1, T.nCubes, A.memorySpace, A.mathDomain);
+		MemoryCube tmp2(cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nCols, 0, A.memorySpace, A.mathDomain);
+		MemoryCube tmp3(cacheOnes.pointer, cacheOnes.size, 0, 0, A.memorySpace, A.mathDomain);
+		return _BatchedMultiply(tmp1, tmp2, tmp3,cacheReshape.nRows * cacheReshape.nCols, 0,MatrixOperation::None, MatrixOperation::None, 1.0, 0.0);
 	}
 	EXPORT int _CubeWiseSumRaw(const ptr_t A, const ptr_t T, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cacheReshape, const ptr_t cacheOnes)
 	{
@@ -635,7 +699,7 @@ EXTERN_C
 	/**
 	* X such that A * X = b by means of LU factorization
 	*/
-	EXPORT int _Solve(const MemoryTile A, MemoryTile B, const MatrixOperation aOperation)
+	EXPORT int _Solve(const MemoryTile& A, MemoryTile& B, const MatrixOperation aOperation)
 	{
 		const cusolverDnHandle_t& handle = detail::CuSolverHandle();
 		int err = -1;
@@ -749,7 +813,7 @@ EXTERN_C
 	/**
 	* A = A^(-1) by means of LU factorization
 	*/
-	EXPORT int _Invert(MemoryTile A, const MatrixOperation aOperation)
+	EXPORT int _Invert(MemoryTile& A, const MatrixOperation aOperation)
 	{
 		float* eyePtr = nullptr;
 		int err = cudaMalloc(&eyePtr, A.TotalSize());
@@ -793,7 +857,7 @@ EXTERN_C
 		return _Invert(_A, aOperation);
 	}
 
-	EXPORT int _ArgAbsMin(int& argMin, const MemoryBuffer x)
+	EXPORT int _ArgAbsMin(int& argMin, const MemoryBuffer& x)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		int err = 0;
@@ -817,7 +881,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer argMin, const MemoryTile A)
+	EXPORT int _ColumnWiseArgAbsMin(MemoryBuffer& argMin, const MemoryTile& A)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
@@ -845,7 +909,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer x)
+	EXPORT int _ArgAbsMax(int& argMax, const MemoryBuffer& x)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		int err = 0;
@@ -869,7 +933,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer argMax, const MemoryTile A)
+	EXPORT int _ColumnWiseArgAbsMax(MemoryBuffer& argMax, const MemoryTile& A)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
@@ -897,7 +961,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _IsNonZero(MemoryBuffer z, const MemoryBuffer x)
+	EXPORT int _IsNonZero(MemoryBuffer& z, const MemoryBuffer& x)
 	{
 		switch (z.mathDomain)
 		{
@@ -917,7 +981,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _EuclideanNorm(double& norm, const MemoryBuffer x)
+	EXPORT int _EuclideanNorm(double& norm, const MemoryBuffer& x)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
 		
@@ -950,13 +1014,13 @@ GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, 
 	CUDA_FOR_LOOP_EPILOGUE
 }
 
-template <typename T>
+template <typename T, bool inverse>
 GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, const T* RESTRICT y, const size_t sz, const T alpha)
 {
 	CUDA_FUNCTION_PROLOGUE
 	CUDA_FOR_LOOP_PROLOGUE
 
-		z[i] = x[i] * y[i] * alpha;
+		z[i] = x[i] * (!inverse ? y[i] : (static_cast<T>(1.0) / y[i])) * alpha;
 
 	CUDA_FOR_LOOP_EPILOGUE
 }

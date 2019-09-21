@@ -20,7 +20,7 @@ EXTERN_C
 		return _MakeTriple(MemoryBuffer(z, 3 * nRows * nCols, memorySpace, mathDomain),
 						 MemoryBuffer(x, nRows, memorySpace, mathDomain), 
 						 MemoryBuffer(y, nCols, memorySpace, mathDomain),
-						 MemoryTile(z, nRows, nCols, memorySpace, mathDomain));
+						   MemoryBuffer(z, nRows * nCols, memorySpace, mathDomain));
 	}
 
 	EXPORT int _MakeRgbaJetColorMap(MemoryBuffer out, const MemoryBuffer in);

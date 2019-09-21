@@ -97,19 +97,31 @@ EXTERN_C
 	public:
 		unsigned nRows;
 		unsigned nCols;
+		unsigned leadingDimension;
 
 		explicit MemoryTile(const ptr_t pointer_ = 0,
 			const unsigned nRows_ = 0,
 			const unsigned nCols_ = 0,
+			const unsigned leadingDimension_ = 0,
 			const MemorySpace memorySpace_ = MemorySpace::Null,
 			const MathDomain mathDomain_ = MathDomain::Null) noexcept
-			: MemoryBuffer(pointer_, nRows_ * nCols_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_)
+			: MemoryBuffer(pointer_, nRows_ * nCols_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_), leadingDimension(leadingDimension_)
 		{
 
 		}
+		
+		explicit MemoryTile(const ptr_t pointer_ = 0,
+		                    const unsigned nRows_ = 0,
+		                    const unsigned nCols_ = 0,
+		                    const MemorySpace memorySpace_ = MemorySpace::Null,
+		                    const MathDomain mathDomain_ = MathDomain::Null) noexcept
+				: MemoryBuffer(pointer_, nRows_ * nCols_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_), leadingDimension(nRows_)
+		{
+		
+		}
 
 		explicit MemoryTile(const MemoryBuffer& buffer) noexcept
-			: MemoryBuffer(buffer), nRows(buffer.size), nCols(1)
+			: MemoryBuffer(buffer), nRows(buffer.size), nCols(1), leadingDimension(buffer.size)
 		{
 
 		}
@@ -118,11 +130,13 @@ EXTERN_C
 
 	protected:
 		explicit MemoryTile(const ptr_t pointer_,
-			const unsigned nRows_, const unsigned nCols_, const unsigned size_,
+				            const unsigned nRows_,
+				            const unsigned nCols_,
+				            const unsigned leadingDimension_,
+				            const unsigned size_,
 			const MemorySpace memorySpace_, const MathDomain mathDomain_)
-			: MemoryBuffer(pointer_, size_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_)
+			: MemoryBuffer(pointer_, size_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_), leadingDimension(leadingDimension_)
 		{
-
 		}
 	};
 
@@ -137,7 +151,7 @@ EXTERN_C
 			const unsigned nCubes_ = 0,
 			const MemorySpace memorySpace_ = MemorySpace::Null,
 			const MathDomain mathDomain_ = MathDomain::Null) noexcept
-			: MemoryTile(pointer_, nRows_, nCols_, nRows_ * nCols_ * nCubes_, memorySpace_, mathDomain_), nCubes(nCubes_)
+			: MemoryTile(pointer_, nRows_, nCols_, nRows_,nRows_ * nCols_ * nCubes_, memorySpace_, mathDomain_), nCubes(nCubes_)
 		{
 
 		}
@@ -179,6 +193,7 @@ EXTERN_C
 		ptr_t nNonZeroRows;
 		unsigned nRows;
 		unsigned nCols;
+		unsigned leadingDimension;
 
 		explicit SparseMemoryTile(const ptr_t pointer_ = 0,
 			const unsigned nNonZeros_ = 0,
@@ -186,12 +201,27 @@ EXTERN_C
 		    const ptr_t nNonZeroRows_ = 0,
 			const unsigned nRows_ = 0,
 			const unsigned nCols_ = 0,
+			const unsigned leadingDimension_ = 0,
 			const MemorySpace memorySpace_ = MemorySpace::Null,
 			const MathDomain mathDomain_ = MathDomain::Null)
 			: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_),
-				nonZeroColumnIndices(nonZeroColumnIndices_), nNonZeroRows(nNonZeroRows_), nRows(nRows_), nCols(nCols_)
+				nonZeroColumnIndices(nonZeroColumnIndices_), nNonZeroRows(nNonZeroRows_), nRows(nRows_), nCols(nCols_), leadingDimension(leadingDimension_)
 		{
 				
+		}
+		
+		explicit SparseMemoryTile(const ptr_t pointer_ = 0,
+		                          const unsigned nNonZeros_ = 0,
+		                          const ptr_t nonZeroColumnIndices_ = 0,
+		                          const ptr_t nNonZeroRows_ = 0,
+		                          const unsigned nRows_ = 0,
+		                          const unsigned nCols_ = 0,
+		                          const MemorySpace memorySpace_ = MemorySpace::Null,
+		                          const MathDomain mathDomain_ = MathDomain::Null)
+				: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_),
+				  nonZeroColumnIndices(nonZeroColumnIndices_), nNonZeroRows(nNonZeroRows_), nRows(nRows_), nCols(nCols_), leadingDimension(nRows_)
+		{
+		
 		}
 
 		MAKE_DEFAULT_CONSTRUCTORS(SparseMemoryTile);
@@ -227,7 +257,7 @@ EXTERN_C
 	{
 		assert(matrix < rhs.nCubes);
 		out = MemoryTile(rhs.pointer + matrix * rhs.nRows * rhs.nCols * rhs.ElementarySize(),
-					   rhs.nRows, rhs.nCols,
+					   rhs.nRows, rhs.nCols, rhs.nRows,
 					   rhs.memorySpace,
 					   rhs.mathDomain);
 	}

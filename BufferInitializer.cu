@@ -76,6 +76,9 @@ EXTERN_C
 		case MathDomain::Double:
 			CUDA_CALL_DOUBLE(__LinSpace__<double>, (double*)buf.pointer, buf.size, (double)x0, (double)dx);
 			break;
+		case MathDomain::Int:
+			CUDA_CALL_SINGLE(__LinSpace__<int>, (int*)buf.pointer, buf.size, (int)x0, (int)dx);
+			break;
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}

@@ -25,7 +25,7 @@ EXTERN_C
 	/**
 	*	yDense = ASparse * xDense
 	*/
-	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation = MatrixOperation::None, const double alpha = 1.0);
+	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 	EXPORT int _SparseDotRaw(const ptr_t y, const ptr_t A, const ptr_t x, 
 						  const unsigned nNonZeros, const ptr_t nonZeroColumnIndices, const ptr_t nNonZeroRows,
 						  const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, 

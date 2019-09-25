@@ -470,10 +470,10 @@ EXTERN_C
 		}
 		
 		const cublasHandle_t& handle = detail::CublasHandle();
-		const size_t nCubesPerSteam = (T.nCubes + nStreams) / nStreams;
+		const size_t nCubesPerStream = (T.nCubes + nStreams) / nStreams;
 		
 		size_t cubeStart = 0;
-		size_t cubeEnd = nCubesPerSteam;
+		size_t cubeEnd = nCubesPerStream;
 		
 		MemoryTile cache1(T.pointer, T.nRows, T.nCols, T.memorySpace, T.mathDomain);
 		MemoryBuffer cache2(x.pointer, x.nRows, x.memorySpace, x.mathDomain);
@@ -497,12 +497,19 @@ EXTERN_C
 			}
 			
 			cubeStart = cubeEnd;
-			cubeEnd = min(cubeEnd + nCubesPerSteam, static_cast<size_t>(T.nCubes));
+			cubeEnd = min(cubeEnd + nCubesPerStream, static_cast<size_t>(T.nCubes));
 			
 			if (cubeStart == T.nCubes)
 				break;
 		}
 		cudaDeviceSynchronize();
+		
+		for (size_t i = 0; i < nStreams; i++)
+		{
+			err = cudaStreamDestroy(streams[i]);
+			if (err)
+				return err;
+		}
 		
 		// reset stream
 		err = cublasSetStream(handle, nullptr);

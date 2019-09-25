@@ -58,18 +58,18 @@ EXTERN_C
 	/**
 	*	yDense = ASparse * xDense
 	*/
-	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha)
+	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
 
-		int err = -1;
+		int err;
 
 		switch (y.mathDomain)
 		{
 		case MathDomain::Float:
 		{
-			const float beta = 0.0f;
+			const float _beta = (float)beta;
 			const float _alpha = (float)alpha;
 
 			err = cusparseScsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
@@ -77,14 +77,12 @@ EXTERN_C
 				&_alpha, descr,
 				(float*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
 				(float*)x.pointer,
-				&beta,
+				&_beta,
 				(float*)y.pointer);
 			break;
-		};
+		}
 		case MathDomain::Double:
 		{
-			const double beta = 0.0;
-
 			err = cusparseDcsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
 				A.nRows, A.nCols, A.size,
 				&alpha, descr,
@@ -93,11 +91,10 @@ EXTERN_C
 				&beta,
 				(double*)y.pointer);
 			break;
-		};;
+		}
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
-
 		if (err)
 			return err;
 		return cudaGetLastError();
@@ -121,7 +118,7 @@ EXTERN_C
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
-
+		
 		int err = -1;
 
 		switch (A.mathDomain)
@@ -132,7 +129,7 @@ EXTERN_C
 			const float _alpha = (float)alpha;
 
 			err = cusparseScsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
-				B.leadingDimension, C.nCols, C.leadingDimension, B.nNonZeroRows,
+			    B.nRows, C.nCols, B.nCols, B.size,
 				&_alpha,
 				descr, (float*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,
 				(float*)C.pointer, C.leadingDimension,
@@ -145,7 +142,7 @@ EXTERN_C
 			const double beta = 0.0;
 
 			err = cusparseDcsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
-				B.leadingDimension, C.nCols, C.leadingDimension, B.nNonZeroRows,
+				B.nRows, C.nCols, B.nCols, B.size,
 				&alpha,
 				descr, (double*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,
 				(double*)C.pointer, C.leadingDimension,
@@ -156,7 +153,7 @@ EXTERN_C
 		default:
 			return CudaKernelException::_NotImplementedException;
 		}
-
+		
 		if (err)
 			return err;
 		return cudaGetLastError();

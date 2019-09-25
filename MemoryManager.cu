@@ -3,7 +3,7 @@
 
 EXTERN_C
 {
-	EXPORT int _HostToHostCopy(MemoryBuffer dest, const MemoryBuffer source)
+	EXPORT int _HostToHostCopy(MemoryBuffer& dest, const MemoryBuffer& source)
 	{
 		return cudaMemcpy((void *)dest.pointer, (void *)source.pointer, dest.TotalSize(), cudaMemcpyHostToHost);
 	}
@@ -14,7 +14,7 @@ EXTERN_C
 		return _HostToHostCopy(dest, source);
     }
 
-	EXPORT int _HostToDeviceCopy(MemoryBuffer dest, const MemoryBuffer source)
+	EXPORT int _HostToDeviceCopy(MemoryBuffer& dest, const MemoryBuffer& source)
 	{
 		return cudaMemcpy((void *)dest.pointer, (void *)source.pointer, dest.TotalSize(), cudaMemcpyHostToDevice);
 	}
@@ -25,7 +25,7 @@ EXTERN_C
 		return _HostToDeviceCopy(dest, source);
 	}
 
-	EXPORT int _DeviceToHostCopy(MemoryBuffer dest, const MemoryBuffer source)
+	EXPORT int _DeviceToHostCopy(MemoryBuffer& dest, const MemoryBuffer& source)
 	{
 		return cudaMemcpy((void *)dest.pointer, (void *)source.pointer, dest.TotalSize(), cudaMemcpyDeviceToHost);
 	}
@@ -36,7 +36,7 @@ EXTERN_C
 		return _DeviceToHostCopy(dest, source);
 	}
 
-	EXPORT int _DeviceToDeviceCopy(MemoryBuffer dest, const MemoryBuffer source)
+	EXPORT int _DeviceToDeviceCopy(MemoryBuffer& dest, const MemoryBuffer& source)
 	{
 		return cudaMemcpy((void *)dest.pointer, (void *)source.pointer, dest.TotalSize(), cudaMemcpyDeviceToDevice);
 	}
@@ -47,7 +47,7 @@ EXTERN_C
 		return _DeviceToDeviceCopy(dest, source);
 	}
 
-	EXPORT int _AutoCopy(MemoryBuffer dest, const MemoryBuffer source)
+	EXPORT int _AutoCopy(MemoryBuffer& dest, const MemoryBuffer& source)
 	{
 		return cudaMemcpy((void *)dest.pointer, (void *)source.pointer, dest.TotalSize(), cudaMemcpyDefault);
 	}
@@ -86,7 +86,7 @@ EXTERN_C
 		return ret;
 	}
 
-	EXPORT int _Free(const MemoryBuffer buf)
+	EXPORT int _Free(const MemoryBuffer& buf)
 	{
 		cudaDeviceSynchronize();
 		return cudaFree((void *)buf.pointer);
@@ -97,7 +97,7 @@ EXTERN_C
 		return _Free(buf);
 	}
 
-	EXPORT int _FreeHost(const MemoryBuffer buf)
+	EXPORT int _FreeHost(const MemoryBuffer& buf)
 	{
 		return cudaFreeHost((void *)buf.pointer);
 	}

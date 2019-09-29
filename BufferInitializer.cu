@@ -5,7 +5,7 @@ EXTERN_C
 {
 	EXPORT int _Zero(MemoryBuffer& buf)
 	{
-		cudaMemset((void*)(buf.pointer), 0, buf.TotalSize());
+		cudaMemsetAsync((void*)(buf.pointer), 0, buf.TotalSize());
 		return cudaGetLastError();
 	}
 	EXPORT int _ZeroRaw(const ptr_t pointer, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)

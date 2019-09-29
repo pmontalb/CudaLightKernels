@@ -193,68 +193,60 @@ EXTERN_C
 	
 	EXPORT int _ElementwiseProduct(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
 	{
-#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
-
-		const cublasHandle_t& handle = detail::CublasHandle();
-
-		switch (z.mathDomain)
-		{
-		case MathDomain::Float:
-		{
-			int err = cublasScopy(handle, z.size, (float*)y.pointer, 1, (float*)z.pointer, 1);
-			if (err)
-				return err;
-
-			const float _alpha = (float)alpha;
-			const float beta = 0.0f;
-
-			return cublasSsbmv(handle, CUBLAS_FILL_MODE_UPPER,
-				z.size,
-				0,  // Just the diagonal; 0 super-diagonal bands
-				&_alpha,
-				(float*)z.pointer, 1,
-				(float*)x.pointer, 1,
-				&beta,
-				(float*)z.pointer, 1);
-		}
-		case MathDomain::Double:
-		{
-			int err = cublasDcopy(handle, z.size, (double*)y.pointer, 1, (double*)z.pointer, 1);
-			if (err)
-				return err;
-
-			const double beta = 0.0;
-			return cublasDsbmv(handle, CUBLAS_FILL_MODE_UPPER,
-				z.size,
-				0,  // Just the diagonal; 0 super-diagonal bands
-				&alpha,
-				(double*)z.pointer, 1,
-				(double*)x.pointer, 1,
-				&beta,
-				(double*)z.pointer, 1);
-		}
-		default:
-			return CudaKernelException::_NotImplementedException;
-		}
-
-#else
-
-		switch (z.mathDomain)
-		{
+		//#define USE_NAIVE_ELEMENTWISE_PRODUCT
+		#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
+			const cublasHandle_t& handle = detail::CublasHandle();
+	
+			switch (z.mathDomain)
+			{
 			case MathDomain::Float:
-				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float COMMA false>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
-				break;
+			{
+				const float _alpha = (float)alpha;
+				const float beta = 0.0f;
+	
+				return cublasSsbmv(handle, CUBLAS_FILL_MODE_UPPER,
+					z.size, 0,  // Just the diagonal; 0 super-diagonal bands
+					&_alpha,
+					(float*)x.pointer, 1,
+					(float*)y.pointer, 1,
+					&beta,
+					(float*)z.pointer, 1);
+			}
 			case MathDomain::Double:
-				CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double COMMA false>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
-				break;
+			{
+				const double beta = 0.0;
+				return cublasDsbmv(handle, CUBLAS_FILL_MODE_UPPER,
+					z.size, 0,  // Just the diagonal; 0 super-diagonal bands
+					&alpha,
+					(double*)x.pointer, 1,
+					(double*)y.pointer, 1,
+					&beta,
+					(double*)z.pointer, 1);
+			}
 			case MathDomain::Int:
 				CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int COMMA false>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
 				break;
 			default:
 				return CudaKernelException::_NotImplementedException;
-		}
+			}
+		#else
 
-#endif // USE_NAIVE_ELEMENTWISE_PRODUCT
+			switch (z.mathDomain)
+			{
+				case MathDomain::Float:
+					CUDA_CALL_SINGLE(__ElementwiseProductNaive__<float COMMA false>, (float*)z.pointer, (float*)x.pointer, (float*)y.pointer, z.size, (float)alpha);
+					break;
+				case MathDomain::Double:
+					CUDA_CALL_DOUBLE(__ElementwiseProductNaive__<double COMMA false>, (double*)z.pointer, (double*)x.pointer, (double*)y.pointer, z.size, alpha);
+					break;
+				case MathDomain::Int:
+					CUDA_CALL_SINGLE(__ElementwiseProductNaive__<int COMMA false>, (int*)z.pointer, (int*)x.pointer, (int*)y.pointer, z.size, (int)alpha);
+					break;
+				default:
+					return CudaKernelException::_NotImplementedException;
+			}
+
+		#endif // USE_NAIVE_ELEMENTWISE_PRODUCT
 
 		return cudaGetLastError();
 	}
@@ -502,7 +494,6 @@ EXTERN_C
 			if (cubeStart == T.nCubes)
 				break;
 		}
-		cudaDeviceSynchronize();
 		
 		for (size_t i = 0; i < nStreams; i++)
 		{

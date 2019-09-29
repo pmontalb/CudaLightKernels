@@ -4,7 +4,7 @@
 #include "Flags.cuh"
 #include "Types.h"
 
-#define USE_NAIVE_ELEMENTWISE_PRODUCT
+//#define USE_NAIVE_ELEMENTWISE_PRODUCT
 
 EXTERN_C
 {

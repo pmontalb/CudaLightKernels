@@ -73,4 +73,11 @@
 
 #define CUDA_FOR_LOOP_EPILOGUE\
 	}
+	
+#ifdef NDEBUG
+	//#define DO_NOT_CALL_CUDA_GET_LAST_ERROR
+	#ifdef DO_NOT_CALL_CUDA_GET_LAST_ERROR
+		#define cudaGetLastError() 0
+	#endif
+#endif
 

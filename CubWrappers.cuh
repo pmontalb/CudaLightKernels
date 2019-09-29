@@ -9,6 +9,8 @@
 EXTERN_C
 {
 	EXPORT int _Sum(double& sum, const MemoryBuffer& v);
+	EXPORT int _DetermineSumCache(MemoryBuffer& cache, const MemoryBuffer& v, const MemoryBuffer& oneElementCache);
+	EXPORT int _SumWithProvidedCache(double& sum, const MemoryBuffer& v, MemoryBuffer& cache, MemoryBuffer& outputCache);
 	inline EXPORT int _SumRaw(double& sum, const ptr_t v, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain)
 	{
 		return _Sum(sum, MemoryBuffer(v, size, memorySpace, mathDomain));

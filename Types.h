@@ -80,7 +80,7 @@ EXTERN_C
 			return size * ElementarySize();
 		}
 
-		MemoryBuffer(const ptr_t pointer_ = 0,
+		explicit MemoryBuffer(const ptr_t pointer_ = 0,
 			const unsigned size_ = 0,
 			const MemorySpace memorySpace_ = MemorySpace::Null,
 			const MathDomain mathDomain_ = MathDomain::Null)

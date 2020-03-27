@@ -4,6 +4,7 @@
 #include "Flags.cuh"
 #include <cublas_v2.h>
 #include <cusolverDn.h>
+#include <cusolverSp.h>
 #include <cusparse.h>
 
 namespace detail
@@ -34,6 +35,7 @@ namespace detail
 	const cusolverDnHandle_t& CuSolverHandle();
 	const cusparseHandle_t& CuSparseHandle();
 	const cusparseMatDescr_t& CsrMatrixDescription();
+	const cusolverSpHandle_t& CuSolverSparseHandle();
 
 	void GetBestDimension(dim3& block, dim3& grid, const unsigned nBlocks, const unsigned problemDimension);
 }

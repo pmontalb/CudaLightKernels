@@ -2,6 +2,7 @@
 
 #include "Flags.cuh"
 #include <assert.h>
+#include <array>
 
 #define MAKE_DEFAULT_CONSTRUCTORS(CLASS)\
 	virtual ~CLASS() noexcept = default;\
@@ -11,11 +12,23 @@
 	CLASS& operator=(CLASS&& rhs) noexcept = default\
 
 #ifdef __CUDACC__
-#include <cublas_v2.h>
-static const cublasOperation_t cublasOperation[] = { CUBLAS_OP_N, CUBLAS_OP_T };
+	#include <cublas_v2.h>
+	static constexpr std::array<cublasOperation_t, 2> cublasOperation = {{ CUBLAS_OP_N, CUBLAS_OP_T }};
 
-#include <cusparse_v2.h>
-static const cusparseOperation_t cusparseOperation[] = { CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_TRANSPOSE };
+	#include <cusparse_v2.h>
+	static constexpr std::array<cusparseOperation_t, 2> cusparseOperation = {{ CUSPARSE_OPERATION_NON_TRANSPOSE, CUSPARSE_OPERATION_TRANSPOSE }};
+#endif
+
+static constexpr char columnMajorOrdering = 'C';
+
+#ifdef USE_MKL
+	static constexpr std::array<char, 2> mklOperation = {{ 'N', 'T' }};
+	static constexpr std::array<const char*, 2> mklOperationGemm = {{ "N", "T" }};
+#endif
+
+#if defined(USE_OPEN_BLAS) || defined(USE_BLAS)
+	static constexpr std::array<char, 2> openBlasOperation = {{ 'N', 'T' }};
+	static constexpr std::array<const char*, 2> openBlasOperationGemm = {{ "N", "T" }};
 #endif
 
 EXTERN_C
@@ -32,7 +45,12 @@ EXTERN_C
 	{
 		Null,
 		Host,
-		Device
+		Device,
+
+		Test,
+		Mkl,
+		OpenBlas,
+		GenericBlas
 	};
 
 	enum class MathDomain
@@ -49,6 +67,14 @@ EXTERN_C
 		None = 0,
 		Transpose = 1
 	};
+
+	enum class LinearSystemSolverType
+	{
+		None,
+		Lu,
+		Qr
+	};
+
 
 	class MemoryBuffer
 	{
@@ -99,12 +125,12 @@ EXTERN_C
 		unsigned nCols;
 		unsigned leadingDimension;
 
-		explicit MemoryTile(const ptr_t pointer_ = 0,
-			const unsigned nRows_ = 0,
-			const unsigned nCols_ = 0,
-			const unsigned leadingDimension_ = 0,
-			const MemorySpace memorySpace_ = MemorySpace::Null,
-			const MathDomain mathDomain_ = MathDomain::Null) noexcept
+		explicit MemoryTile(const ptr_t pointer_,
+			const unsigned nRows_,
+			const unsigned nCols_,
+			const unsigned leadingDimension_,
+			const MemorySpace memorySpace_,
+			const MathDomain mathDomain_) noexcept
 			: MemoryBuffer(pointer_, nRows_ * nCols_, memorySpace_, mathDomain_), nRows(nRows_), nCols(nCols_), leadingDimension(leadingDimension_)
 		{
 
@@ -194,6 +220,8 @@ EXTERN_C
 		unsigned nRows;
 		unsigned nCols;
 		unsigned leadingDimension;
+
+		ptr_t thirdPartyHandle = 0; /* 3rd party LA provider use sparse matrix handle */
 
 		explicit SparseMemoryTile(const ptr_t pointer_ = 0,
 			const unsigned nNonZeros_ = 0,

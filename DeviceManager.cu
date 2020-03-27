@@ -251,4 +251,17 @@ namespace detail
 		}
 		return descr;
 	}
+
+	const cusolverSpHandle_t& CuSolverSparseHandle()
+	{
+		static bool hasBeenInitialised = false;
+		static cusolverSpHandle_t cusparseSpHandle[6];
+		if (!hasBeenInitialised)
+		{
+			for (int i = 0; i < 6; ++i)
+				cusolverSpCreate(&cusparseSpHandle[i]);
+			hasBeenInitialised = true;
+		}
+		return cusparseSpHandle[currentDevice];
+	}
 }

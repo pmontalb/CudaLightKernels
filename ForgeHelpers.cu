@@ -76,7 +76,7 @@ GLOBAL void  __MakeRgbaJetColorMap__(unsigned char* RESTRICT out, const V* RESTR
 
 EXTERN_C
 {
-	EXPORT int _MakePair(MemoryBuffer z, const MemoryBuffer x, const MemoryBuffer y)
+	EXPORT int _MakePair(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y)
 	{
 		assert(z.mathDomain == MathDomain::Float);
 		assert(x.size == y.size);
@@ -105,7 +105,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _MakeTriple(MemoryBuffer v, const MemoryBuffer x, const MemoryBuffer y, const MemoryBuffer z)
+	EXPORT int _MakeTriple(MemoryBuffer& v, const MemoryBuffer& x, const MemoryBuffer& y, const MemoryBuffer& z)
 	{
 		assert(v.mathDomain == MathDomain::Float);
 		assert(x.size * y.size == z.size);
@@ -134,7 +134,7 @@ EXTERN_C
 		return cudaGetLastError();
 	}
 
-	EXPORT int _MakeRgbaJetColorMap(MemoryBuffer out, const MemoryBuffer in)
+	EXPORT int _MakeRgbaJetColorMap(MemoryBuffer& out, const MemoryBuffer& in)
 	{
 		assert(4 * in.size == out.size);
 

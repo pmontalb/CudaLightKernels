@@ -3,6 +3,17 @@
 
 EXTERN_C
 {
+	EXPORT int _AllocateCsrHandle(SparseMemoryTile&)
+	{
+		// TODO: use cuSparse generic API
+		return 0;
+	}
+	EXPORT int _DestroyCsrHandle(SparseMemoryTile&)
+	{
+		// TODO: use cuSparse generic API
+		return 0;
+	}
+
 	/**
 	* zDense = alpha * xSparse + yDense
 	*/
@@ -58,7 +69,7 @@ EXTERN_C
 	/**
 	*	yDense = ASparse * xDense
 	*/
-	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
+	EXPORT int _SparseDot(MemoryBuffer& y, SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
@@ -114,7 +125,7 @@ EXTERN_C
 	/**
 	*	ADense = BSparse * CDense
 	*/
-	EXPORT int _SparseMultiply(MemoryTile& A, const SparseMemoryTile& B, const MemoryTile& C, const MatrixOperation bOperation, const double alpha)
+	EXPORT int _SparseMultiply(MemoryTile& A,  SparseMemoryTile& B, const MemoryTile& C, const MatrixOperation bOperation, const double alpha)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
 		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
@@ -169,5 +180,117 @@ EXTERN_C
 		MemoryTile _C(C, nRowsC, nColsC, leadingDimensionC, memorySpace, mathDomain);
 
 		return _SparseMultiply(_A, _B, _C, bOperation, alpha);
+	}
+
+	EXPORT int _SparseSolve(const SparseMemoryTile& A, MemoryTile& B, const LinearSystemSolverType solver)
+	{
+		const auto& handle = detail::CuSolverSparseHandle();
+		const auto& descr = detail::CsrMatrixDescription();
+
+		int err = -1;
+
+		switch (A.mathDomain)
+		{
+			case MathDomain::Float:
+			{
+				for (size_t j = 0; j < B.nCols; ++j)
+				{
+					int singular = 0;
+
+					switch (solver)
+					{
+						case LinearSystemSolverType::Qr:
+							err = cusolverSpScsrlsvqr(handle,
+													  A.nRows,
+													  A.size,
+													  descr,
+													  (float *) A.pointer,
+													  (int *) A.nNonZeroRows,
+													  (int *) A.nonZeroColumnIndices,
+													  ((float *) B.pointer) + j * B.nRows,
+													  1e-7,
+													  0,
+													  (float *) B.pointer,
+													  &singular);
+							if (err)
+								return err;
+
+							break;
+						case LinearSystemSolverType::Lu:
+							// only host at the moment!
+//							err = cusolverSpScsrlsvlu(handle,
+//													  A.nRows,
+//													  A.size,
+//													  descr,
+//													  (float *) A.pointer,
+//													  (int *) A.nNonZeroRows,
+//													  (int *) A.nonZeroColumnIndices,
+//													  ((float *) B.pointer) + j * B.nRows,
+//													  1e-7,
+//													  0,
+//													  (float *) B.pointer,
+//													  &singular);
+//							if (err)
+//								return err;
+//							break;
+						default:
+							return CudaKernelException::_NotImplementedException;
+					}
+				}
+				break;
+			}
+			case MathDomain::Double:
+			{
+				for (size_t j = 0; j < B.nCols; ++j)
+				{
+					int singular = 0;
+					switch (solver)
+					{
+						case LinearSystemSolverType::Qr:
+							err = cusolverSpDcsrlsvqr(handle,
+													  A.nRows,
+													  A.size,
+													  descr,
+													  (double *) A.pointer,
+													  (int *) A.nNonZeroRows,
+													  (int *) A.nonZeroColumnIndices,
+													  ((double *) B.pointer) + j * B.nRows,
+													  1e-7,
+													  0,
+													  (double *) B.pointer,
+													  &singular);
+							if (err)
+								return err;
+							break;
+						case LinearSystemSolverType::Lu:
+							// only host at the moment
+//							err = cusolverSpDcsrlsvlu(handle,
+//													  A.nRows,
+//													  A.size,
+//													  descr,
+//													  (double *) A.pointer,
+//													  (int *) A.nNonZeroRows,
+//													  (int *) A.nonZeroColumnIndices,
+//													  ((double *) B.pointer) + j * B.nRows,
+//													  1e-7,
+//													  0,
+//													  (float *) B.pointer,
+//													  &singular);
+//							if (err)
+//								return err;
+//							break;
+						default:
+							return CudaKernelException::_NotImplementedException;
+					}
+				}
+				break;
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
+		}
+
+		cudaDeviceSynchronize();
+
+		return cudaGetLastError();
 	}
 }

@@ -697,107 +697,253 @@ EXTERN_C
 	/**
 	* X such that A * X = b by means of LU factorization
 	*/
-	EXPORT int _Solve(const MemoryTile& A, MemoryTile& B, const MatrixOperation aOperation)
+	EXPORT int _Solve(const MemoryTile& A, MemoryTile& B, const MatrixOperation aOperation, const LinearSystemSolverType solver)
 	{
-		const cusolverDnHandle_t& handle = detail::CuSolverHandle();
-		int err = -1;
+		const auto& handle = detail::CuSolverHandle();
+		const auto& cublasHandle = detail::CublasHandle();
+		
+		int err;
+
+		int *info = nullptr;
+
 		switch (A.mathDomain)
 		{
-		case MathDomain::Float:
-		{
-			// Need to copy A, as it will be overwritten by its factorization
-			float *aPtr = nullptr;
-			err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(float));
-			if (err)
-				return err;
-			cudaMemcpy(aPtr, (float*)A.pointer, A.nRows * A.nRows * sizeof(float), cudaMemcpyDeviceToDevice);
+			case MathDomain::Float:
+			{
+				float *buffer = nullptr;
 
-			// calculate buffer size required by the solver
-			int bufferSize = 0;
-			if (cusolverDnSgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.nRows, &bufferSize))
-				return CudaKernelException::_InternalException;
-			float *buffer = nullptr;
-			err = cudaMalloc(&buffer, bufferSize * sizeof(float));
-			if (err)
-				return err;
+				// Need to copy A, as it will be overwritten by its factorization
+				float *aPtr = nullptr;
+				err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(float));
+				if (err)
+					return err;
+				cudaMemcpy(aPtr, (float *) A.pointer, A.nRows * A.nRows * sizeof(float), cudaMemcpyDeviceToDevice);
 
-			// allocate memory for pivoting
-			int *ipiv = nullptr;
-			err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
-			if (err)
-				return err;
+				// calculate buffer size required by the solver
+				int bufferSize = 0;
+				switch (solver)
+				{
+					case LinearSystemSolverType::Lu:
+						if (cusolverDnSgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, &bufferSize))
+							return CudaKernelException::_InternalException;
+						break;
+					case LinearSystemSolverType::Qr:
+						if (cusolverDnSgeqrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, &bufferSize))
+							return CudaKernelException::_InternalException;
+						break;
+					default:
+						return CudaKernelException::_NotImplementedException;
+				}
+				err = cudaMalloc(&buffer, bufferSize * sizeof(float));
+				if (err)
+					return err;
 
-			// Initializes auxliary value for solver
-			int *info = nullptr;
-			err = cudaMalloc(&info, sizeof(int));
-			if (err)
-				return err;
-			err = cudaMemset(info, 0, sizeof(int));
-			if (err)
-				return err;
+				// Initializes auxliary value for solver
+				err = cudaMalloc(&info, sizeof(int));
+				if (err)
+					return err;
+				err = cudaMemset(info, 0, sizeof(int));
+				if (err)
+					return err;
 
-			// Factorize A (and overwrite it with L)
-			if (cusolverDnSgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
-				return CudaKernelException::_InternalException;
-			// Solve
-			err = cusolverDnSgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (float*)B.pointer, A.nRows, info);
-			cudaDeviceSynchronize();
+				// allocate memory for pivoting
+				switch (solver)
+				{
+					case LinearSystemSolverType::Lu:
+					{
+						int *ipiv = nullptr;
 
-			// free memory
-			cudaFree(info);
-			cudaFree(buffer);
-			cudaFree(ipiv);
-			break;
+						err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
+						if (err)
+							return err;
+
+						// Factorize A (and overwrite it with L)
+						if (cusolverDnSgetrf(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, buffer, ipiv, info))
+							return CudaKernelException::_InternalException;
+
+						// Solve
+						err = cusolverDnSgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.leadingDimension, ipiv, (float *) B.pointer, B.leadingDimension, info);
+
+						cudaFree(ipiv);
+
+						break;
+					}
+					case LinearSystemSolverType::Qr:
+					{
+						float *tau = nullptr;
+						err = cudaMalloc((void **) &tau, sizeof(float) * A.nRows);
+						if (err)
+							return err;
+
+						// compute QR factorization
+						if (cusolverDnSgeqrf(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, tau, buffer, bufferSize, info))
+							return CudaKernelException::_InternalException;
+
+						// Q^T * B
+						err = cusolverDnSormqr(
+								handle,
+								CUBLAS_SIDE_LEFT,
+								CUBLAS_OP_T,
+								A.nRows,
+								B.nCols,
+								A.nRows,
+								aPtr,
+								A.leadingDimension,
+								tau,
+								(float *) B.pointer,
+								B.leadingDimension,
+								buffer,
+								bufferSize,
+								info);
+						if (err)
+							return err;
+
+						// Solve (x = R \ (Q^T * B))
+						static constexpr float one = 1.0f;
+						err = cublasStrsm(
+								cublasHandle,
+								CUBLAS_SIDE_LEFT,
+								CUBLAS_FILL_MODE_UPPER,
+								cublasOperation[static_cast<unsigned>(aOperation)],
+								CUBLAS_DIAG_NON_UNIT,
+								A.nRows,
+								B.nCols,
+								&one,
+								aPtr,
+								A.leadingDimension,
+								(float *)B.pointer,
+								B.leadingDimension);
+						break;
+					}
+					default:
+						return CudaKernelException::_NotImplementedException;
+				}
+
+				cudaFree(buffer);
+				cudaFree(aPtr);
+				break;
+			}
+			case MathDomain::Double:
+			{
+				double *buffer = nullptr;
+
+				// Need to copy A, as it will be overwritten by its factorization
+				double *aPtr = nullptr;
+				err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(double));
+				if (err)
+					return err;
+				cudaMemcpy(aPtr, (double *) A.pointer, A.nRows * A.nRows * sizeof(double), cudaMemcpyDeviceToDevice);
+
+				// calculate buffer size required by the solver
+				int bufferSize = 0;
+				switch (solver)
+				{
+					case LinearSystemSolverType::Lu:
+						if (cusolverDnDgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, &bufferSize))
+							return CudaKernelException::_InternalException;
+						break;
+					case LinearSystemSolverType::Qr:
+						if (cusolverDnDgeqrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, &bufferSize))
+							return CudaKernelException::_InternalException;
+						break;
+					default:
+						return CudaKernelException::_NotImplementedException;
+				}
+
+				err = cudaMalloc(&buffer, bufferSize * sizeof(double));
+				if (err)
+					return err;
+
+				// Initializes auxliary value for solver
+				err = cudaMalloc(&info, sizeof(int));
+				if (err)
+					return err;
+				err = cudaMemset(info, 0, sizeof(int));
+				if (err)
+					return err;
+
+				// allocate memory for pivoting
+				switch (solver)
+				{
+					case LinearSystemSolverType::Lu:
+					{
+						int *ipiv = nullptr;
+
+						err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
+						if (err)
+							return err;
+
+						// Factorize A (and overwrite it with L)
+						if (cusolverDnDgetrf(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, buffer, ipiv, info))
+							return CudaKernelException::_InternalException;
+
+						// Solve
+						err = cusolverDnDgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.leadingDimension, ipiv, (double *) B.pointer, B.leadingDimension, info);
+						break;
+					}
+					case LinearSystemSolverType::Qr:
+					{
+						double *tau = nullptr;
+						err = cudaMalloc((void **) &tau, sizeof(double) * A.nRows);
+						if (err)
+							return err;
+
+						// compute QR factorization
+						if (cusolverDnDgeqrf(handle, A.nRows, A.nRows, aPtr, A.leadingDimension, tau, buffer, bufferSize, info))
+							return CudaKernelException::_InternalException;
+
+						// B = Q^T * B
+						err = cusolverDnDormqr(
+								handle,
+								CUBLAS_SIDE_LEFT,
+								CUBLAS_OP_T,
+								A.nRows,
+								B.nCols,
+								A.nRows,
+								aPtr,
+								A.leadingDimension,
+								tau,
+								(double *) B.pointer,
+								B.leadingDimension,
+								buffer,
+								bufferSize,
+								info);
+						if (err)
+							return err;
+
+						// Solve (x = R \ (Q^T * B))
+						static constexpr double one = 1.0;
+						err = cublasDtrsm(
+								cublasHandle,
+								CUBLAS_SIDE_LEFT,
+								CUBLAS_FILL_MODE_UPPER,
+								cublasOperation[static_cast<unsigned>(aOperation)],
+								CUBLAS_DIAG_NON_UNIT,
+								A.nRows,
+								B.nCols,
+								&one,
+								aPtr,
+								A.leadingDimension,
+								(double *) B.pointer,
+								B.leadingDimension);
+						break;
+					}
+					default:
+						return CudaKernelException::_NotImplementedException;
+				}
+
+				cudaFree(buffer);
+				cudaFree(aPtr);
+				break;
+			}
+			default:
+				return CudaKernelException::_NotImplementedException;
 		}
-		case MathDomain::Double:
-		{
-			// Need to copy A, as it will be overwritten by its factorization
-			double *aPtr = nullptr;
-			err = cudaMalloc(&aPtr, A.nRows * A.nRows * sizeof(double));
-			if (err)
-				return err;
-			cudaMemcpy(aPtr, (float*)A.pointer, A.nRows * A.nRows * sizeof(double), cudaMemcpyDeviceToDevice);
 
-			// calculate buffer size required by the solver
-			int bufferSize = 0;
-			if (cusolverDnDgetrf_bufferSize(handle, A.nRows, A.nRows, aPtr, A.nRows, &bufferSize))
-				return CudaKernelException::_InternalException;
-			double *buffer = nullptr;
-			err = cudaMalloc(&buffer, bufferSize * sizeof(double));
-			if (err)
-				return err;
+		cudaDeviceSynchronize();
 
-			// allocate memory for pivoting
-			int *ipiv = nullptr;
-			err = cudaMalloc(&ipiv, A.nRows * sizeof(int));
-			if (err)
-				return err;
-
-			// Initializes auxliary value for solver
-			int *info = nullptr;
-			err = cudaMalloc(&info, sizeof(int));
-			if (err)
-				return err;
-			err = cudaMemset(info, 0, sizeof(int));
-			if (err)
-				return err;
-
-			// Factorize A (and overwrite it with L)
-			if (cusolverDnDgetrf(handle, A.nRows, A.nRows, aPtr, A.nRows, buffer, ipiv, info))
-				return CudaKernelException::_InternalException;
-			// Solve
-			err = cusolverDnDgetrs(handle, cublasOperation[static_cast<unsigned>(aOperation)], A.nRows, B.nCols, aPtr, A.nRows, ipiv, (double*)B.pointer, A.nRows, info);
-			cudaDeviceSynchronize();
-
-			// free memory
-			cudaFree(info);
-			cudaFree(buffer);
-			cudaFree(ipiv);
-			break;
-		};
-		default: 
-			return CudaKernelException::_NotImplementedException;
-		}
+		// free memory
+		cudaFree(info);
 
 		return err;
 	}

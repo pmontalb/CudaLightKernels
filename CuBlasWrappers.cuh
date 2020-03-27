@@ -27,14 +27,14 @@ EXTERN_C
 	EXPORT int _AddEqualRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha = 1.0);
 
 	/**
-	* A = alpha * B + beta * A (NB: it uses <t>geam, maybe more efficient than <t>axpy?)
+	* A = alpha * A + beta * B (NB: it uses <t>geam, maybe more efficient than <t>axpy?)
 	*/
 	EXPORT int _AddEqualMatrix(MemoryTile& A, const MemoryTile& B, const MatrixOperation aOperation = MatrixOperation::None, const MatrixOperation bOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 1.0);
 	EXPORT int _AddEqualMatrixRaw(const ptr_t A, const ptr_t B, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None, const MatrixOperation bOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 1.0);
 
-/**
-* z -= x
-*/
+	/**
+	* z -= x
+	*/
 	EXPORT int _SubtractEqual(MemoryBuffer& z, const MemoryBuffer& x);
 	inline EXPORT int _SubtractEqualRaw(const ptr_t z, const ptr_t x, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain) { return _AddEqualRaw(z, x, size, memorySpace, mathDomain, -1.0); };
 
@@ -121,7 +121,7 @@ EXTERN_C
 /**
 * X such that A * X = B by means of LU factorization
 */
-	EXPORT int _Solve(const MemoryTile& A, MemoryTile& B, const MatrixOperation aOperation = MatrixOperation::None);
+	EXPORT int _Solve(const MemoryTile& A, MemoryTile& B, const MatrixOperation aOperation = MatrixOperation::None, const LinearSystemSolverType solver = LinearSystemSolverType::Lu);
 	EXPORT int _SolveRaw(const ptr_t A, const ptr_t B, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const MatrixOperation aOperation = MatrixOperation::None);
 
 	/**

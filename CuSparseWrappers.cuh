@@ -7,6 +7,9 @@
 
 EXTERN_C
 {
+	EXPORT int _AllocateCsrHandle(SparseMemoryTile&);
+	EXPORT int _DestroyCsrHandle(SparseMemoryTile&);
+
 	/**
 	* zDense = alpha * xSparse + yDense
 	*/
@@ -25,7 +28,7 @@ EXTERN_C
 	/**
 	*	yDense = ASparse * xDense
 	*/
-	EXPORT int _SparseDot(MemoryBuffer& y, const SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
+	EXPORT int _SparseDot(MemoryBuffer& y, SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation = MatrixOperation::None, const double alpha = 1.0, const double beta = 0.0);
 	EXPORT int _SparseDotRaw(const ptr_t y, const ptr_t A, const ptr_t x, 
 						  const unsigned nNonZeros, const ptr_t nonZeroColumnIndices, const ptr_t nNonZeroRows,
 						  const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, 
@@ -35,9 +38,11 @@ EXTERN_C
 	/**
 	*	ADense = BSparse * CDense
 	*/
-	EXPORT int _SparseMultiply(MemoryTile& A, const SparseMemoryTile& B, const MemoryTile& C, const MatrixOperation bOperation = MatrixOperation::None, const double alpha = 1.0);
+	EXPORT int _SparseMultiply(MemoryTile& A, SparseMemoryTile& B, const MemoryTile& C, const MatrixOperation bOperation = MatrixOperation::None, const double alpha = 1.0);
 	EXPORT int _SparseMultiplyRaw(const ptr_t A, const ptr_t B, const ptr_t C, 
 								  const unsigned nNonZeros, const ptr_t nonZeroColumnIndices, const ptr_t nNonZeroRows,
 								  const unsigned nRowsB, const unsigned nRowsC, const unsigned nColsC, const MemorySpace memorySpace, const MathDomain mathDomain,
 								  const unsigned leadingDimensionB, const unsigned leadingDimensionC, const MatrixOperation bOperation = MatrixOperation::None, const double alpha = 1.0);
+
+	EXPORT int _SparseSolve(const SparseMemoryTile& A, MemoryTile& B, const LinearSystemSolverType solver = LinearSystemSolverType::Lu);
 }

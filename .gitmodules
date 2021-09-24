@@ -1,6 +1,4 @@
 [submodule "cmake"]
 	path = cmake
 	url = git@github.com:pmontalb/CmakeUtilities.git
-[submodule "cub"]
-	path = cub
-	url = git@github.com:NVlabs/cub.git
+

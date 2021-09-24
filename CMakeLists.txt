@@ -13,5 +13,5 @@ create_cuda_library(
         BufferInitializer.cu CuBlasWrappers.cu CubWrappers.cu
         CuSparseWrappers.cu DeviceManager.cu ForgeHelpers.cu MemoryManager.cu
     PUBLIC_INCLUDE_DIRECTORIES
-        . cub
+        .
 )

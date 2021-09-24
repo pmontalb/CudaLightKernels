@@ -30,8 +30,15 @@ EXTERN_C
 			if (cublasScopy(cuBlasHandle, z.size, (float*)y.pointer, 1, (float*)z.pointer, 1))
 				return CudaKernelException::_InternalException;
 
+                        const float beta = 1.0f;
 			const float _alpha = (float)alpha;
-			err = cusparseSaxpyi(cuSparseHandle, x.size, &_alpha, (float*)x.pointer, (int*)x.indices, (float*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+                        cusparseSpVecDescr_t x_descr;
+                        cusparseCreateSpVec(&x_descr, x.size, x.size, (int*)x.indices, (float*)x.pointer, cusparseIndexType_t ::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_32F);
+
+                        cusparseDnVecDescr_t z_descr;
+                        cusparseCreateDnVec(&z_descr, x.size, (float*)z.pointer, cudaDataType_t::CUDA_R_32F);
+
+                        err = cusparseAxpby(cuSparseHandle, &_alpha, x_descr, &beta, z_descr);
 			break;
 		};
 		case MathDomain::Double:
@@ -39,7 +46,16 @@ EXTERN_C
 			if (cublasDcopy(cuBlasHandle, z.size, (double*)y.pointer, 1, (double*)z.pointer, 1))
 				return CudaKernelException::_InternalException;
 
-			err = cusparseDaxpyi(cuSparseHandle, x.size, &alpha, (double*)x.pointer, (int*)x.indices, (double*)z.pointer, CUSPARSE_INDEX_BASE_ZERO);
+                        const double beta = 1.0;
+
+                        cusparseSpVecDescr_t x_descr;
+                        cusparseCreateSpVec(&x_descr, x.size, x.size, (int*)x.indices, (float*)x.pointer, cusparseIndexType_t ::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_64F);
+
+                        cusparseDnVecDescr_t z_descr;
+                        cusparseCreateDnVec(&z_descr, x.size, (float*)z.pointer, cudaDataType_t::CUDA_R_64F);
+
+                        err = cusparseAxpby(cuSparseHandle, &alpha, x_descr, &beta, z_descr);
+
 			break;
 		};;
 		default: 
@@ -72,7 +88,6 @@ EXTERN_C
 	EXPORT int _SparseDot(MemoryBuffer& y, SparseMemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cusparseHandle_t& handle = detail::CuSparseHandle();
-		const cusparseMatDescr_t& descr = detail::CsrMatrixDescription();
 
 		int err;
 
@@ -80,27 +95,37 @@ EXTERN_C
 		{
 		case MathDomain::Float:
 		{
-			const float _beta = (float)beta;
-			const float _alpha = (float)alpha;
+			const auto _beta = (float)beta;
+			const auto _alpha = (float)alpha;
 
-			err = cusparseScsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
-				A.nRows, A.nCols, A.size,
-				&_alpha, descr,
-				(float*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
-				(float*)x.pointer,
-				&_beta,
-				(float*)y.pointer);
+                        cusparseSpMatDescr_t A_descr;
+                        cusparseCreateCsr(&A_descr, A.nRows, A.nCols, A.size, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices, (float*)A.pointer,
+                                          cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_32F);
+
+                        cusparseDnVecDescr_t x_descr;
+                        cusparseCreateDnVec(&x_descr, x.size, (float*)x.pointer, cudaDataType_t::CUDA_R_32F);
+
+                        cusparseDnVecDescr_t y_descr;
+                        cusparseCreateDnVec(&y_descr, y.size, (float*)y.pointer, cudaDataType_t::CUDA_R_32F);
+
+                        err = cusparseSpMV(handle, cusparseOperation[static_cast<int>(aOperation)], &_alpha,
+                                     A_descr, x_descr, &_beta, y_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMVAlg_t::CUSPARSE_MV_ALG_DEFAULT, nullptr);
 			break;
 		}
 		case MathDomain::Double:
 		{
-			err = cusparseDcsrmv(handle, cusparseOperation[static_cast<int>(aOperation)],
-				A.nRows, A.nCols, A.size,
-				&alpha, descr,
-				(double*)A.pointer, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices,
-				(double*)x.pointer,
-				&beta,
-				(double*)y.pointer);
+                  cusparseSpMatDescr_t A_descr;
+                  cusparseCreateCsr(&A_descr, A.nRows, A.nCols, A.size, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices, (float*)A.pointer,
+                                    cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_64F);
+
+                  cusparseDnVecDescr_t x_descr;
+                  cusparseCreateDnVec(&x_descr, x.size, (float*)x.pointer, cudaDataType_t::CUDA_R_64F);
+
+                  cusparseDnVecDescr_t y_descr;
+                  cusparseCreateDnVec(&y_descr, y.size, (float*)y.pointer, cudaDataType_t::CUDA_R_64F);
+
+                  err = cusparseSpMV(handle, cusparseOperation[static_cast<int>(aOperation)], &alpha,
+                                     A_descr, x_descr, &beta, y_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMVAlg_t::CUSPARSE_MV_ALG_DEFAULT, nullptr);
 			break;
 		}
 		default:
@@ -139,26 +164,38 @@ EXTERN_C
 			const float beta = 0.0f;
 			const float _alpha = (float)alpha;
 
-			err = cusparseScsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
-			    B.nRows, C.nCols, B.nCols, B.size,
-				&_alpha,
-				descr, (float*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,
-				(float*)C.pointer, C.leadingDimension,
-				&beta,
-				(float*)A.pointer, A.leadingDimension);
+                        cusparseDnMatDescr_t A_descr;
+                        cusparseCreateDnMat(&A_descr, A.nRows, A.nCols, A.leadingDimension, (float*)A.pointer, cudaDataType_t::CUDA_R_32F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
+
+                        cusparseSpMatDescr_t B_descr;
+                        cusparseCreateCsr(&B_descr, B.nRows, B.nCols, B.size, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices, (float*)B.pointer,
+                                          cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_32F);
+
+                        cusparseDnMatDescr_t C_descr;
+                        cusparseCreateDnMat(&C_descr, C.nRows, C.nCols, C.leadingDimension, (float*)C.pointer, cudaDataType_t::CUDA_R_32F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
+
+                        err = cusparseSpMM(handle, cusparseOperation[static_cast<int>(bOperation)],
+                                     cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                     &_alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMMAlg_t::CUSPARSE_SPMM_ALG_DEFAULT, nullptr);
 			break;
 		}
 		case MathDomain::Double:
 		{
 			const double beta = 0.0;
 
-			err = cusparseDcsrmm(handle, cusparseOperation[static_cast<int>(bOperation)],
-				B.nRows, C.nCols, B.nCols, B.size,
-				&alpha,
-				descr, (double*)B.pointer, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices,
-				(double*)C.pointer, C.leadingDimension,
-				&beta,
-				(double*)A.pointer, B.leadingDimension);
+                        cusparseDnMatDescr_t A_descr;
+                        cusparseCreateDnMat(&A_descr, A.nRows, A.nCols, A.leadingDimension, (double*)A.pointer, cudaDataType_t::CUDA_R_64F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
+
+                        cusparseSpMatDescr_t B_descr;
+                        cusparseCreateCsr(&B_descr, B.nRows, B.nCols, B.size, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices, (double*)B.pointer,
+                                          cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_64F);
+
+                        cusparseDnMatDescr_t C_descr;
+                        cusparseCreateDnMat(&C_descr, C.nRows, C.nCols, C.leadingDimension, (double*)C.pointer, cudaDataType_t::CUDA_R_64F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
+
+                        err = cusparseSpMM(handle, cusparseOperation[static_cast<int>(bOperation)],
+                                           cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                           &alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMMAlg_t::CUSPARSE_SPMM_ALG_DEFAULT, nullptr);
 			break;
 		}
 		default:

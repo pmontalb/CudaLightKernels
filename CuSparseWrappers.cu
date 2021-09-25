@@ -1,5 +1,6 @@
 #include "CuSparseWrappers.cuh"
 #include "DeviceManager.cuh"
+#include "MemoryManager.cuh"
 
 EXTERN_C
 {
@@ -108,24 +109,45 @@ EXTERN_C
                         cusparseDnVecDescr_t y_descr;
                         cusparseCreateDnVec(&y_descr, y.size, (float*)y.pointer, cudaDataType_t::CUDA_R_32F);
 
+                        size_t bufferSize;
+                        MemoryBuffer buf(0, 0, MemorySpace::Device, y.mathDomain);
+                        err = cusparseSpMV_bufferSize(handle, cusparseOperation[static_cast<int>(aOperation)], &_alpha,
+                                           A_descr, x_descr, &_beta, y_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMVAlg_t::CUSPARSE_SPMV_CSR_ALG1, &bufferSize);
+                        if (bufferSize > 0) {
+                          buf.size = static_cast<unsigned>(bufferSize);
+                          _Alloc(buf);
+                        }
                         err = cusparseSpMV(handle, cusparseOperation[static_cast<int>(aOperation)], &_alpha,
-                                     A_descr, x_descr, &_beta, y_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMVAlg_t::CUSPARSE_MV_ALG_DEFAULT, nullptr);
+                                     A_descr, x_descr, &_beta, y_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMVAlg_t::CUSPARSE_SPMV_CSR_ALG1, (float*)buf.pointer);
+                        if (bufferSize > 0)
+                          _Free(buf);
+
 			break;
 		}
 		case MathDomain::Double:
 		{
                   cusparseSpMatDescr_t A_descr;
-                  cusparseCreateCsr(&A_descr, A.nRows, A.nCols, A.size, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices, (float*)A.pointer,
+                  cusparseCreateCsr(&A_descr, A.nRows, A.nCols, A.size, (int*)A.nNonZeroRows, (int*)A.nonZeroColumnIndices, (double*)A.pointer,
                                     cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_64F);
 
                   cusparseDnVecDescr_t x_descr;
-                  cusparseCreateDnVec(&x_descr, x.size, (float*)x.pointer, cudaDataType_t::CUDA_R_64F);
+                  cusparseCreateDnVec(&x_descr, x.size, (double*)x.pointer, cudaDataType_t::CUDA_R_64F);
 
                   cusparseDnVecDescr_t y_descr;
-                  cusparseCreateDnVec(&y_descr, y.size, (float*)y.pointer, cudaDataType_t::CUDA_R_64F);
+                  cusparseCreateDnVec(&y_descr, y.size, (double*)y.pointer, cudaDataType_t::CUDA_R_64F);
 
+                  size_t bufferSize;
+                  MemoryBuffer buf(0, 0, MemorySpace::Device, y.mathDomain);
+                  err = cusparseSpMV_bufferSize(handle, cusparseOperation[static_cast<int>(aOperation)], &alpha,
+                                                A_descr, x_descr, &beta, y_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMVAlg_t::CUSPARSE_SPMV_CSR_ALG1, &bufferSize);
+                  if (bufferSize > 0) {
+                    buf.size = static_cast<unsigned>(bufferSize);
+                    _Alloc(buf);
+                  }
                   err = cusparseSpMV(handle, cusparseOperation[static_cast<int>(aOperation)], &alpha,
-                                     A_descr, x_descr, &beta, y_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMVAlg_t::CUSPARSE_MV_ALG_DEFAULT, nullptr);
+                                     A_descr, x_descr, &beta, y_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMVAlg_t::CUSPARSE_SPMV_CSR_ALG1, (double*)buf.pointer);
+                  if (bufferSize > 0)
+                    _Free(buf);
 			break;
 		}
 		default:
@@ -174,9 +196,20 @@ EXTERN_C
                         cusparseDnMatDescr_t C_descr;
                         cusparseCreateDnMat(&C_descr, C.nRows, C.nCols, C.leadingDimension, (float*)C.pointer, cudaDataType_t::CUDA_R_32F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
 
+                        size_t bufferSize;
+                        MemoryBuffer buf(0, 0, MemorySpace::Device, A.mathDomain);
+                        err = cusparseSpMM_bufferSize(handle, cusparseOperation[static_cast<int>(bOperation)],
+                                           cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                           &_alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMMAlg_t::CUSPARSE_SPMM_CSR_ALG1, &bufferSize);
+                        if (bufferSize > 0) {
+                          buf.size = static_cast<unsigned>(bufferSize);
+                          _Alloc(buf);
+                        }
                         err = cusparseSpMM(handle, cusparseOperation[static_cast<int>(bOperation)],
                                      cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                     &_alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMMAlg_t::CUSPARSE_SPMM_ALG_DEFAULT, nullptr);
+                                     &_alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_32F, cusparseSpMMAlg_t::CUSPARSE_SPMM_CSR_ALG1, (float*)(buf.pointer));
+                        if (bufferSize > 0)
+                          _Free(buf);
 			break;
 		}
 		case MathDomain::Double:
@@ -193,9 +226,19 @@ EXTERN_C
                         cusparseDnMatDescr_t C_descr;
                         cusparseCreateDnMat(&C_descr, C.nRows, C.nCols, C.leadingDimension, (double*)C.pointer, cudaDataType_t::CUDA_R_64F, cusparseOrder_t ::CUSPARSE_ORDER_COL);
 
+                        size_t bufferSize;
+                        MemoryBuffer buf(0, 0, MemorySpace::Device, A.mathDomain);
+                        err = cusparseSpMM_bufferSize(handle, cusparseOperation[static_cast<int>(bOperation)],
+                                           cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                           &alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMMAlg_t::CUSPARSE_SPMM_CSR_ALG1, &bufferSize);
+                        if (bufferSize > 0) {
+                          buf.size = static_cast<unsigned>(bufferSize);
+                          _Alloc(buf);
+                        }
+
                         err = cusparseSpMM(handle, cusparseOperation[static_cast<int>(bOperation)],
                                            cusparseOperation_t::CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                           &alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMMAlg_t::CUSPARSE_SPMM_ALG_DEFAULT, nullptr);
+                                           &alpha, B_descr, C_descr, &beta, A_descr, cudaDataType_t::CUDA_R_64F, cusparseSpMMAlg_t::CUSPARSE_SPMM_CSR_ALG1, (double*)(buf.pointer));
 			break;
 		}
 		default:

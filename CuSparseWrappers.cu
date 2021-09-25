@@ -191,7 +191,7 @@ EXTERN_C
 
                         cusparseSpMatDescr_t B_descr;
                         cusparseCreateCsr(&B_descr, B.nRows, B.nCols, B.size, (int*)B.nNonZeroRows, (int*)B.nonZeroColumnIndices, (float*)B.pointer,
-                                          cusparseIndexType_t::CUSPARSE_INDEX_64I, cusparseIndexType_t::CUSPARSE_INDEX_64I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_32F);
+                                          cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexType_t::CUSPARSE_INDEX_32I, cusparseIndexBase_t::CUSPARSE_INDEX_BASE_ZERO, cudaDataType_t::CUDA_R_32F);
 
                         cusparseDnMatDescr_t C_descr;
                         cusparseCreateDnMat(&C_descr, C.nRows, C.nCols, C.leadingDimension, (float*)C.pointer, cudaDataType_t::CUDA_R_32F, cusparseOrder_t ::CUSPARSE_ORDER_COL);

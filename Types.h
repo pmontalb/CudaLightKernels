@@ -105,7 +105,7 @@ EXTERN_C
 			}
 		}
 
-		virtual size_t TotalSize() const noexcept
+		size_t TotalSize() const noexcept
 		{
 			return size * ElementarySize();
 		}

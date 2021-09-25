@@ -178,7 +178,7 @@ EXTERN_C
 }
 
 // z = alpha * x + beta * y + gamma * z
-GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, const int* RESTRICT y, const size_t sz, const int alpha, const int beta, const int gamma);
+GLOBAL void __IntAffineOperationNaive__(int* z, const int* x, const int* y, const size_t sz, const int alpha, const int beta, const int gamma);
 
 template <typename T, bool inverse>
 GLOBAL void __ElementwiseProductNaive__(T* RESTRICT z, const T* RESTRICT x, const T* RESTRICT y, const size_t sz, const T alpha = static_cast<T>(1.0));

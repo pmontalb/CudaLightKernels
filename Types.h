@@ -4,13 +4,6 @@
 #include <assert.h>
 #include <array>
 
-#define MAKE_DEFAULT_CONSTRUCTORS(CLASS)\
-	virtual ~CLASS() noexcept = default;\
-	CLASS(const CLASS& rhs) noexcept = default;\
-	CLASS(CLASS&& rhs) noexcept = default;\
-	CLASS& operator=(const CLASS& rhs) noexcept = default;\
-	CLASS& operator=(CLASS&& rhs) noexcept = default\
-
 #ifdef __CUDACC__
 	#include <cublas_v2.h>
 	static constexpr std::array<cublasOperation_t, 2> cublasOperation = {{ CUBLAS_OP_N, CUBLAS_OP_T }};
@@ -79,6 +72,7 @@ EXTERN_C
 	class MemoryBuffer
 	{
 	public:
+          virtual ~MemoryBuffer() = default;
 		ptr_t pointer;
 		MemorySpace memorySpace;
 		MathDomain mathDomain;
@@ -114,8 +108,6 @@ EXTERN_C
 		{
 				
 		}
-
-		MAKE_DEFAULT_CONSTRUCTORS(MemoryBuffer);
 	};
 
 	class MemoryTile : public MemoryBuffer
@@ -152,8 +144,6 @@ EXTERN_C
 
 		}
 
-		MAKE_DEFAULT_CONSTRUCTORS(MemoryTile);
-
 	protected:
 		explicit MemoryTile(const ptr_t pointer_,
 				            const unsigned nRows_,
@@ -187,8 +177,6 @@ EXTERN_C
 		{
 
 		}
-		
-		MAKE_DEFAULT_CONSTRUCTORS(MemoryCube);
 	};
 
 	class SparseMemoryBuffer : public MemoryBuffer
@@ -201,12 +189,7 @@ EXTERN_C
 			const ptr_t indices_ = 0,
 			const MemorySpace memorySpace_ = MemorySpace::Null,
 			const MathDomain mathDomain_ = MathDomain::Null)
-			: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_), indices(indices_)
-		{
-				
-		}
-
-		MAKE_DEFAULT_CONSTRUCTORS(SparseMemoryBuffer);
+			: MemoryBuffer(pointer_, nNonZeros_, memorySpace_, mathDomain_), indices(indices_) {}
 	};
 
 	/**
@@ -251,8 +234,6 @@ EXTERN_C
 		{
 		
 		}
-
-		MAKE_DEFAULT_CONSTRUCTORS(SparseMemoryTile);
 	};
 
 	static size_t GetElementarySize(const MemoryBuffer& memoryBuffer) noexcept
@@ -291,5 +272,4 @@ EXTERN_C
 	}
 }
 
-#undef MAKE_DEFAULT_CONSTRUCTORS
 

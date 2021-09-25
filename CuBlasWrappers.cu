@@ -83,12 +83,12 @@ EXTERN_C
     {
         return _Add(z, y, x, -1.0);
     }
-    
+
     EXPORT int _SubtractEqual(MemoryBuffer& z, const MemoryBuffer& x)
     {
         return _AddEqual(z, x, -1.0);
     }
-    
+
 	/**
 	* A += alpha * B
 	*/
@@ -130,7 +130,7 @@ EXTERN_C
 		MemoryTile _B(B, nRows, nCols, memorySpace, mathDomain);
 		return _AddEqualMatrix(_A, _B, aOperation, bOperation, alpha, beta);
 	}
-	
+
 	/**
 	* z *= alpha
 	*/
@@ -162,7 +162,7 @@ EXTERN_C
 	EXPORT int _ScaleColumns(MemoryTile& z, const MemoryBuffer& alpha)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
-		
+
 		cublasPointerMode_t originalPointerMode;
 		cublasGetPointerMode(handle, &originalPointerMode);
 		cublasSetPointerMode(handle, cublasPointerMode_t::CUBLAS_POINTER_MODE_DEVICE);
@@ -181,7 +181,7 @@ EXTERN_C
 				return CudaKernelException::_NotImplementedException;
 		}
 		cublasSetPointerMode(handle, originalPointerMode);
-		
+
 		return cudaGetLastError();
 	}
 	EXPORT int _ScaleColumnsRaw(const ptr_t z, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t alpha)
@@ -190,20 +190,20 @@ EXTERN_C
 		MemoryBuffer _alpha(alpha, nCols, memorySpace, mathDomain);
 		return _ScaleColumns(_z, _alpha);
 	}
-	
+
 	EXPORT int _ElementwiseProduct(MemoryBuffer& z, const MemoryBuffer& x, const MemoryBuffer& y, const double alpha)
 	{
 		//#define USE_NAIVE_ELEMENTWISE_PRODUCT
 		#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
 			const cublasHandle_t& handle = detail::CublasHandle();
-	
+
 			switch (z.mathDomain)
 			{
 			case MathDomain::Float:
 			{
 				const float _alpha = (float)alpha;
 				const float beta = 0.0f;
-	
+
 				return cublasSsbmv(handle, CUBLAS_FILL_MODE_UPPER,
 					z.size, 0,  // Just the diagonal; 0 super-diagonal bands
 					&_alpha,
@@ -263,7 +263,7 @@ EXTERN_C
 		#ifndef USE_NAIVE_ELEMENTWISE_PRODUCT
 			return CudaKernelException::_NotImplementedException;
 		#else
-		
+
 		switch (z.mathDomain)
 		{
 			case MathDomain::Float:
@@ -278,9 +278,9 @@ EXTERN_C
 			default:
 				return CudaKernelException::_NotImplementedException;
 		}
-		
+
 		#endif // USE_NAIVE_ELEMENTWISE_PRODUCT
-		
+
 		return cudaGetLastError();
 	}
 	EXPORT int _ElementwiseDivisionRaw(const ptr_t z, const ptr_t x, const ptr_t y, const unsigned size, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
@@ -351,7 +351,7 @@ EXTERN_C
 			{
 				float _alpha = (float)alpha;
 				float _beta = (float)beta;
-				
+
 				return cublasSgemmStridedBatched(handle, cublasOperation[static_cast<unsigned>(bOperation)], cublasOperation[static_cast<unsigned>(cOperation)],
 				                                 A.nRows, A.nCols, B.nCols,
 				                                 &_alpha,
@@ -383,7 +383,7 @@ EXTERN_C
 		MemoryCube _C(C, nRowsC, nColsC, nCubes, memorySpace, mathDomain);
 		return _BatchedMultiply(_A, _B, _C, _B.nRows * _B.nCols, _C.nRows * _C.nCols, bOperation, cOperation, alpha, beta);
 	}
-	
+
 	EXPORT int _Dot(MemoryBuffer& y, const MemoryTile& A, const MemoryBuffer& x, const MatrixOperation aOperation, const double alpha, const double beta)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
@@ -460,17 +460,17 @@ EXTERN_C
 			if (err)
 				return err;
 		}
-		
+
 		const cublasHandle_t& handle = detail::CublasHandle();
 		const size_t nCubesPerStream = (T.nCubes + nStreams) / nStreams;
-		
+
 		size_t cubeStart = 0;
 		size_t cubeEnd = nCubesPerStream;
-		
+
 		MemoryTile cache1(T.pointer, T.nRows, T.nCols, T.memorySpace, T.mathDomain);
 		MemoryBuffer cache2(x.pointer, x.nRows, x.memorySpace, x.mathDomain);
 		MemoryBuffer cache3(y.pointer, y.nRows, y.memorySpace, y.mathDomain);
-		
+
 		const size_t tOffset = T.nRows * T.nCols * T.ElementarySize();
 		const size_t xOffset = x.nRows * x.ElementarySize();
 		const size_t yOffset = y.nRows * y.ElementarySize();
@@ -482,31 +482,31 @@ EXTERN_C
 				err = _KroneckerProduct(cache1, cache2, cache3, alpha);
 				if (err)
 					return err;
-				
+
 				cache1.pointer += tOffset;
 				cache2.pointer += xOffset;
 				cache3.pointer += yOffset;
 			}
-			
+
 			cubeStart = cubeEnd;
 			cubeEnd = min(cubeEnd + nCubesPerStream, static_cast<size_t>(T.nCubes));
-			
+
 			if (cubeStart == T.nCubes)
 				break;
 		}
-		
+
 		for (size_t i = 0; i < nStreams; i++)
 		{
 			err = cudaStreamDestroy(streams[i]);
 			if (err)
 				return err;
 		}
-		
+
 		// reset stream
 		err = cublasSetStream(handle, nullptr);
 		if (err)
 			return err;
-		
+
 		return cudaGetLastError();
 	}
 	EXPORT int _BatchedTransposedKroneckerProductRaw(const ptr_t A, const ptr_t x, const ptr_t y, const unsigned nRows, const unsigned nCols, const unsigned nCubes, const MemorySpace memorySpace, const MathDomain mathDomain, const double alpha)
@@ -524,7 +524,7 @@ EXTERN_C
 
 		switch(A.mathDomain)
 		{
-		case MathDomain::Float: 
+		case MathDomain::Float:
 		{
 			float *onesPtr = nullptr;
 			err = cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(float));
@@ -555,7 +555,7 @@ EXTERN_C
 			cudaFree(buffer);
 			break;
 		}
-		case MathDomain::Double: 
+		case MathDomain::Double:
 		{
 			double *onesPtr = nullptr;
 			err = cudaMalloc((void **)&onesPtr, A.nRows * A.nCols * sizeof(double));
@@ -585,7 +585,7 @@ EXTERN_C
 			cudaFree(buffer);
 			break;
 		}
-		default: 
+		default:
 			return CudaKernelException::_NotImplementedException;
 		}
 
@@ -608,14 +608,14 @@ EXTERN_C
 				_Free(cache);
 			cache.pointer = 0;
 		}
-		
+
 		if (cache.pointer == 0)
 		{
 			cache = MemoryBuffer(cache.pointer, A.nCols, A.memorySpace, A.mathDomain);
 			_Alloc(cache);
 			_Initialize(cache, 1.0);
 		}
-		
+
 		return _Dot(x, A, cache, aOperation);
 	}
 	EXPORT int _RowWiseSumRaw(const ptr_t x, const ptr_t A, const unsigned nRows, const unsigned nCols, const MemorySpace memorySpace, const MathDomain mathDomain, const ptr_t cache, const MatrixOperation aOperation)
@@ -637,14 +637,14 @@ EXTERN_C
 				_Free(cacheOnes);
 			cacheOnes.pointer = 0;
 		}
-		
+
 		if (cacheOnes.pointer == 0)
 		{
 			cacheOnes = MemoryBuffer(0, T.nCubes, T.memorySpace, T.mathDomain);
 			_Alloc(cacheOnes);
 			_Initialize(cacheOnes, 1.0);
 		}
-		
+
 		// reshape T into nCols blocks of [nRows * nCubes]
 		if (cacheReshape.nRows != T.nRows || cacheReshape.nCols != T.nCubes || cacheReshape.nCubes != T.nCols)
 		{
@@ -652,13 +652,13 @@ EXTERN_C
 				_Free(cacheReshape);
 			cacheReshape.pointer = 0;
 		}
-		
+
 		if (cacheReshape.pointer == 0)
 		{
 			cacheReshape = MemoryCube(0, T.nRows, T.nCubes, T.nCols, T.memorySpace, T.mathDomain);
 			_Alloc(cacheReshape);
 		}
-		
+
 		const cublasHandle_t& handle = detail::CublasHandle();
 		switch (A.mathDomain)
 		{
@@ -675,11 +675,11 @@ EXTERN_C
 			default:
 				return CudaKernelException::_NotImplementedException;
 		}
-		
+
 		int err = cudaGetLastError();
 		if (err)
 			return err;
-		
+
 		MemoryCube tmp1(A.pointer, A.nRows, 1, T.nCubes, A.memorySpace, A.mathDomain);
 		MemoryCube tmp2(cacheReshape.pointer, cacheReshape.nRows, cacheReshape.nCols, 0, A.memorySpace, A.mathDomain);
 		MemoryCube tmp3(cacheOnes.pointer, cacheOnes.size, 0, 0, A.memorySpace, A.mathDomain);
@@ -701,7 +701,7 @@ EXTERN_C
 	{
 		const auto& handle = detail::CuSolverHandle();
 		const auto& cublasHandle = detail::CublasHandle();
-		
+
 		int err;
 
 		int *info = nullptr;
@@ -1128,14 +1128,14 @@ EXTERN_C
 	EXPORT int _EuclideanNorm(double& norm, const MemoryBuffer& x)
 	{
 		const cublasHandle_t& handle = detail::CublasHandle();
-		
+
 		switch (x.mathDomain)
 		{
 			case MathDomain::Float:
 			{
 				auto _norm = (float)norm;
 				int err = cublasSnrm2(handle, x.size, (float*)x.pointer, 1, &_norm);
-				
+
 				norm = _norm;
 				return err;
 			}
@@ -1148,13 +1148,13 @@ EXTERN_C
 	}
 }
 
-GLOBAL void __IntAffineOperationNaive__(int* RESTRICT z, const int* RESTRICT x, const int* RESTRICT y, const size_t sz, const int alpha, const int beta, const int gamma)
+GLOBAL void __IntAffineOperationNaive__(int* z, const int* x, const int* y, const size_t sz, const int alpha, const int beta, const int gamma)
 {
 	CUDA_FUNCTION_PROLOGUE
 	CUDA_FOR_LOOP_PROLOGUE
-		
+
 		z[i] = alpha * x[i] + beta * y[i] + gamma * z[i];
-	
+
 	CUDA_FOR_LOOP_EPILOGUE
 }
 

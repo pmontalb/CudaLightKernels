@@ -4,6 +4,15 @@
 #include <assert.h>
 #include <array>
 
+#define MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(CLASS)\
+              CLASS(const CLASS& rhs) noexcept = default;\
+              CLASS(CLASS&& rhs) noexcept = default;\
+              CLASS& operator=(const CLASS& rhs) noexcept = default;\
+              CLASS& operator=(CLASS&& rhs) noexcept = default
+#define MAKE_DEFAULT_CONSTRUCTORS(CLASS)\
+	virtual ~CLASS() noexcept = default;\
+	MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(CLASS)
+
 #ifdef __CUDACC__
 	#include <cublas_v2.h>
 	static constexpr std::array<cublasOperation_t, 2> cublasOperation = {{ CUBLAS_OP_N, CUBLAS_OP_T }};
@@ -72,7 +81,8 @@ EXTERN_C
 	class MemoryBuffer
 	{
 	public:
-          virtual ~MemoryBuffer() = default;
+          MAKE_DEFAULT_CONSTRUCTORS(MemoryBuffer);
+
 		ptr_t pointer;
 		MemorySpace memorySpace;
 		MathDomain mathDomain;
@@ -95,7 +105,7 @@ EXTERN_C
 			}
 		}
 
-		virtual size_t TotalSize() const noexcept
+		size_t TotalSize() const noexcept
 		{
 			return size * ElementarySize();
 		}
@@ -113,6 +123,7 @@ EXTERN_C
 	class MemoryTile : public MemoryBuffer
 	{
 	public:
+          MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(MemoryTile);
 		unsigned nRows;
 		unsigned nCols;
 		unsigned leadingDimension;
@@ -159,6 +170,7 @@ EXTERN_C
 	class MemoryCube : public MemoryTile
 	{
 	public:
+          MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(MemoryCube);
 		unsigned nCubes;
 
 		explicit MemoryCube(const ptr_t pointer_ = 0,
@@ -182,6 +194,7 @@ EXTERN_C
 	class SparseMemoryBuffer : public MemoryBuffer
 	{
 	public:
+          MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(SparseMemoryBuffer);
 		ptr_t indices;
 
 		explicit SparseMemoryBuffer(const ptr_t pointer_ = 0,
@@ -198,6 +211,7 @@ EXTERN_C
 	class SparseMemoryTile : public MemoryBuffer
 	{
 	public:
+          MAKE_DEFAULT_CONSTRUCTORS_NO_DESTRUCTOR(SparseMemoryTile);
 		ptr_t nonZeroColumnIndices;
 		ptr_t nNonZeroRows;
 		unsigned nRows;
@@ -271,5 +285,7 @@ EXTERN_C
 					   rhs.mathDomain);
 	}
 }
+
+#undef MAKE_DEFAULT_CONSTRUCTORS
 
 
